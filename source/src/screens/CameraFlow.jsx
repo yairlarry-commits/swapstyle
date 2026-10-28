@@ -45,14 +45,24 @@ export function CameraFlow({ open, garment, onClose, onComplete }) {
       setCameraError('blocked');
       return;
     }
+    // Short wait when the camera is already allowed (some embeds hang silently);
+    // a long one when the phone is still asking the person for permission.
+    let state = 'prompt';
+    try {
+      state = (await navigator.permissions?.query({ name: 'camera' }))?.state ?? 'prompt';
+    } catch {}
+    const ask = navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1080 }, height: { ideal: 1350 } },
+      audio: false,
+    });
     try {
       const stream = await Promise.race([
-        navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment', width: { ideal: 1080 }, height: { ideal: 1350 } },
-          audio: false,
-        }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000)),
-      ]);
+        ask,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), state === 'granted' ? 6000 : 60000)),
+      ]).catch((e) => {
+        ask.then((s) => s.getTracks().forEach((t) => t.stop())).catch(() => {}); // a late answer must not leave the camera on
+        throw e;
+      });
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -227,6 +237,14 @@ export function CameraFlow({ open, garment, onClose, onComplete }) {
                 </span>
                 <span className="text-[11px] text-white/80">Capture</span>
               </button>
+            ) : cameraError && liveSupported() ? (
+              // the live camera keeps the outline on screen, so offer it again first
+              <button onClick={() => { setCameraError(null); startCamera(); }} className="flex flex-col items-center gap-1" aria-label="Open camera">
+                <span className="grid place-items-center rounded-full bg-gold-400 text-black ring-4 ring-gold-400/30 transition active:scale-95" style={{ height: 72, width: 72 }}>
+                  <Camera size={28} />
+                </span>
+                <span className="text-[11px] text-white/80">Open camera</span>
+              </button>
             ) : (
               <PhotoPicker onFile={pickFile} camera label="Take photo" className="flex flex-col items-center gap-1">
                 <span className="grid place-items-center rounded-full bg-gold-400 text-black ring-4 ring-gold-400/30 transition active:scale-95" style={{ height: 72, width: 72 }}>
@@ -236,7 +254,10 @@ export function CameraFlow({ open, garment, onClose, onComplete }) {
               </PhotoPicker>
             )}
             {!cameraOn && cameraError && liveSupported() && (
-              <RoundAction label="Live camera" onClick={() => { setCameraError(null); startCamera(); }}><RefreshCw size={20} /></RoundAction>
+              <PhotoPicker onFile={pickFile} camera label="Phone camera" className="flex flex-col items-center gap-1 text-white/80">
+                <span className="grid h-12 w-12 place-items-center rounded-full bg-white/10 backdrop-blur"><Camera size={20} /></span>
+                <span className="text-[11px]">Phone camera</span>
+              </PhotoPicker>
             )}
           </div>
         )}
@@ -413,6 +434,9 @@ function CaptureView({ videoRef, cameraOn, cameraError, template, onFile }) {
         </div>
         {!cameraOn && !cameraError && (
           <p className="absolute inset-x-0 bottom-4 text-center text-xs text-white/50">Starting camera…</p>
+        )}
+        {!cameraOn && cameraError && liveSupported() && (
+          <p className="absolute inset-x-4 bottom-4 text-center text-xs text-white/70">The camera did not open. Tap Open camera and allow access.</p>
         )}
       </div>
       <p className="mt-3 text-center text-xs text-white/55">Lay it flat and line it up with the outline.</p>

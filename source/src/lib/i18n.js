@@ -233,6 +233,8 @@ const HE = {
   Gallery: 'גלריה',
   'Take photo': 'צלמו',
   'Live camera': 'מצלמה חיה',
+  'Phone camera': 'מצלמת הטלפון',
+  'The camera did not open. Tap Open camera and allow access.': 'המצלמה לא נפתחה. לחצו "פתחו מצלמה" ואשרו גישה.',
   'Starting camera…': 'המצלמה נפתחת…',
   'Lay it flat and line it up with the outline.': 'הניחו את הבגד שטוח ויישרו אותו לשרטוט.',
   'Drag the corners to cut away the surroundings': 'גררו את הפינות כדי לחתוך את מה שמסביב',
