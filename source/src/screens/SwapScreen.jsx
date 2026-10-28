@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from '../context/RouterContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useInbox } from '../context/InboxContext.jsx';
 import { fetchSwap, patchSwap, fetchMessages, sendMessage } from '../lib/api.js';
 import { SWAP_METHODS, SHIPPING_FEE, methodsAllowed, conditionLabel, timeAgo } from '../lib/constants.js';
 import { playSound } from '../lib/sounds.js';
@@ -22,6 +23,7 @@ export function SwapScreen({ swapId }) {
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(null);
   const lastCount = useRef(0);
+  const { markRead } = useInbox();
 
   const load = useCallback(async () => {
     try {
@@ -41,6 +43,13 @@ export function SwapScreen({ swapId }) {
     const t = setInterval(load, POLL_MS);
     return () => clearInterval(t);
   }, [load]);
+
+  // opening the conversation marks everything in it as read
+  useEffect(() => {
+    if (!swap) return;
+    const latest = messages.length ? messages[messages.length - 1].created_at : swap.created_at;
+    markRead(swap.id, latest);
+  }, [swap, messages, markRead]);
 
   // chime when the other person writes
   useEffect(() => {

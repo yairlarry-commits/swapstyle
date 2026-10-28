@@ -1,9 +1,10 @@
 import { useEffect, useId } from 'react';
-import { Home, Plus, User, Inbox, X, Globe } from 'lucide-react';
+import { Home, Plus, User, Inbox, X, Globe, MessageCircle } from 'lucide-react';
 import { getLang, setLang } from '../lib/i18n.js';
 import { GARMENT_STYLES, avatarGradient, initials } from '../lib/constants.js';
 import { SHAPE_W, SHAPE_H, garmentShape } from '../lib/garments.js';
 import { useRouter } from '../context/RouterContext.jsx';
+import { useInbox } from '../context/InboxContext.jsx';
 
 // ---------- Button ----------
 const BUTTON_VARIANTS = {
@@ -254,11 +255,13 @@ const TABS = [
   { route: { name: 'feed' }, icon: Home, label: 'Feed' },
   { route: { name: 'offers' }, icon: Inbox, label: 'Offers' },
   { route: { name: 'upload' }, icon: Plus, label: 'Add' },
+  { route: { name: 'messages' }, icon: MessageCircle, label: 'Messages' },
   { route: { name: 'profile' }, icon: User, label: 'Closet' },
 ];
 
 export function BottomNav() {
   const { route, navigate } = useRouter();
+  const { unreadTotal } = useInbox();
   const isActive = (r) => (r.name === 'profile' && route.name === 'profile' ? !route.userId : r.name === route.name);
 
   return (
@@ -278,7 +281,14 @@ export function BottomNav() {
           }
           return (
             <button key={t.route.name} onClick={() => navigate(t.route)} aria-label={t.label} className="flex flex-1 flex-col items-center justify-center gap-0.5 py-2 transition active:scale-95">
-              <Icon size={22} strokeWidth={active ? 2.4 : 1.8} className={active ? 'text-ink-900' : 'text-ink-400'} />
+              <span className="relative">
+                <Icon size={22} strokeWidth={active ? 2.4 : 1.8} className={active ? 'text-ink-900' : 'text-ink-400'} />
+                {t.route.name === 'messages' && unreadTotal > 0 && (
+                  <span className="absolute -end-2 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-gold-500 px-1 text-[9px] font-bold leading-none text-white ring-2 ring-white">
+                    {unreadTotal > 9 ? '9+' : unreadTotal}
+                  </span>
+                )}
+              </span>
               <span className={`text-[10px] font-medium tracking-wide ${active ? 'text-ink-900' : 'text-ink-400'}`}>{t.label}</span>
             </button>
           );

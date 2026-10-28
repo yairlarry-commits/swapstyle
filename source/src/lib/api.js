@@ -165,6 +165,27 @@ export async function fetchMessages(swapId) {
   return data ?? [];
 }
 
+// Recent messages across several swaps, newest first (for the Messages list and unread counts).
+// Returns [] when the chat table isn't set up yet.
+export async function fetchMessagesFor(swapIds) {
+  if (!swapIds.length) return [];
+  if (DEMO_MODE) {
+    const all = await Promise.all(swapIds.map((id) => demoStore.messages(id)));
+    return all.flat().sort((a, b) => b.created_at.localeCompare(a.created_at));
+  }
+  const { data, error } = await supabase
+    .from('swap_messages')
+    .select('*')
+    .in('swap_id', swapIds)
+    .order('created_at', { ascending: false })
+    .limit(1000);
+  if (error) {
+    if (/swap_messages/i.test(error.message || '')) return [];
+    throw error;
+  }
+  return data ?? [];
+}
+
 export async function sendMessage(swapId, body) {
   if (DEMO_MODE) return demoStore.sendMessage(swapId, body);
   const { data, error } = await supabase.from('swap_messages').insert({ swap_id: swapId, body }).select('*').single();

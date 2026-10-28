@@ -12,6 +12,8 @@ import { UploadScreen } from './screens/UploadScreen.jsx';
 import { OffersScreen } from './screens/OffersScreen.jsx';
 import { SwapScreen } from './screens/SwapScreen.jsx';
 import { AdminScreen } from './screens/AdminScreen.jsx';
+import { MessagesScreen } from './screens/MessagesScreen.jsx';
+import { InboxProvider } from './context/InboxContext.jsx';
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -68,7 +70,7 @@ function Shell() {
 
   if (!user) return <AuthScreen />;
 
-  const showNav = ['feed', 'offers', 'upload'].includes(route.name) || (route.name === 'profile' && !route.userId);
+  const showNav = ['feed', 'offers', 'upload', 'messages'].includes(route.name) || (route.name === 'profile' && !route.userId);
 
   let screen;
   switch (route.name) {
@@ -86,6 +88,9 @@ function Shell() {
       break;
     case 'swap':
       screen = <SwapScreen swapId={route.swapId} />;
+      break;
+    case 'messages':
+      screen = <MessagesScreen />;
       break;
     case 'admin':
       screen = <AdminScreen />;
@@ -108,9 +113,11 @@ export default function App() {
   return (
     <ErrorBoundary>
       <AuthProvider>
-        <RouterProvider>
-          <Shell key={lang} />
-        </RouterProvider>
+        <InboxProvider>
+          <RouterProvider>
+            <Shell key={lang} />
+          </RouterProvider>
+        </InboxProvider>
       </AuthProvider>
     </ErrorBoundary>
   );
