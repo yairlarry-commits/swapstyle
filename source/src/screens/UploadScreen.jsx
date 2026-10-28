@@ -3,12 +3,16 @@ import { X, WandSparkles, RefreshCw, Camera, Package, Check, Shirt } from 'lucid
 import { useRouter } from '../context/RouterContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { createItem } from '../lib/api.js';
+import { reopenSwapFor } from '../lib/swapIntent.js';
 import { CATEGORIES, SIZES, ONE_SIZE, KIDS_AGES, ITEM_TYPES, CONDITIONS, GARMENTS, GARMENT_STYLES } from '../lib/constants.js';
 import { Button, Corner, ItemVisual } from '../components/ui.jsx';
 import { CameraFlow } from './CameraFlow.jsx';
 
-export function UploadScreen() {
-  const { navigate } = useRouter();
+const MAX_BUNDLE = 100;
+const clampBundle = (v) => Math.max(2, Math.min(MAX_BUNDLE, Math.round(Number(v)) || 2));
+
+export function UploadScreen({ returnToSwap = null }) {
+  const { navigate, back } = useRouter();
   const { user } = useAuth();
   const [photo, setPhoto] = useState(null);
   const [cameraOpen, setCameraOpen] = useState(false);
@@ -53,13 +57,17 @@ export function UploadScreen() {
         size: isKids ? form.kidsAgeGroup || '3-5y' : isAcc ? ONE_SIZE : form.size,
         kids_age_group: (isKids && form.kidsAgeGroup) || null,
         item_type: form.itemType,
-        bundle_count: form.itemType === 'bundle' ? form.bundleCount : 1,
+        bundle_count: form.itemType === 'bundle' ? clampBundle(form.bundleCount) : 1,
         condition: form.condition,
         garment_type: garmentType,
         color: form.color.trim() || null,
         image_url: photo,
       });
-      navigate({ name: 'profile' });
+      if (returnToSwap) {
+        // came from "Offer a swap" with an empty closet: go back and reopen the offer
+        reopenSwapFor(returnToSwap);
+        back();
+      } else navigate({ name: 'profile' });
     } catch (e) {
       setError(e.message);
     } finally {
@@ -72,11 +80,16 @@ export function UploadScreen() {
       <header className="sticky top-0 z-20 border-b border-ink-100 bg-sand-50/95 pt-safe backdrop-blur-xl">
         <div className="mx-auto flex max-w-md items-center justify-between px-5 py-3">
           <h1 className="font-display text-lg font-semibold text-ink-900">Add an item</h1>
-          <button onClick={() => navigate({ name: 'feed' })} className="grid h-9 w-9 place-items-center rounded-full text-ink-500 hover:bg-ink-100">
+          <button onClick={() => (returnToSwap ? back() : navigate({ name: 'feed' }))} className="grid h-9 w-9 place-items-center rounded-full text-ink-500 hover:bg-ink-100">
             <X size={18} />
           </button>
         </div>
       </header>
+      {returnToSwap && (
+        <div className="mx-auto max-w-md px-5 pt-3">
+          <p className="rounded-xl bg-gold-400/15 px-4 py-2.5 text-xs text-ink-700">Add an item to offer. When you publish it, you'll go straight back to the swap.</p>
+        </div>
+      )}
 
       <div className="mx-auto max-w-md px-5 py-5">
         <button onClick={() => setCameraOpen(true)} className="group relative aspect-[4/5] w-full overflow-hidden rounded-3xl bg-white shadow-card transition active:scale-[0.99]">
@@ -125,17 +138,39 @@ export function UploadScreen() {
           />
 
           {form.itemType === 'bundle' && (
-            <label className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1">
               <span className="text-xs font-medium text-ink-500">Number of items in bundle</span>
-              <input
-                type="number"
-                min={2}
-                max={10}
-                value={form.bundleCount}
-                onChange={(e) => setForm({ ...form, bundleCount: Math.max(2, Math.min(10, Number(e.target.value) || 5)) })}
-                className="h-11 rounded-xl border border-ink-200 px-3 text-sm focus:border-ink-900 focus:outline-none"
-              />
-            </label>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  aria-label="Fewer"
+                  onClick={() => setForm({ ...form, bundleCount: Math.max(2, (Number(form.bundleCount) || 2) - 1) })}
+                  className="grid h-11 w-11 place-items-center rounded-xl bg-white text-lg font-semibold text-ink-700 ring-1 ring-ink-200 transition active:scale-95"
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={2}
+                  max={MAX_BUNDLE}
+                  value={form.bundleCount}
+                  // type freely; the number is checked when leaving the field and when publishing
+                  onChange={(e) => setForm({ ...form, bundleCount: e.target.value.replace(/[^0-9]/g, '').slice(0, 3) })}
+                  onBlur={() => setForm({ ...form, bundleCount: clampBundle(form.bundleCount) })}
+                  className="h-11 w-20 rounded-xl border border-ink-200 px-3 text-center text-sm font-semibold focus:border-ink-900 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  aria-label="More"
+                  onClick={() => setForm({ ...form, bundleCount: Math.min(MAX_BUNDLE, (Number(form.bundleCount) || 1) + 1) })}
+                  className="grid h-11 w-11 place-items-center rounded-xl bg-white text-lg font-semibold text-ink-700 ring-1 ring-ink-200 transition active:scale-95"
+                >
+                  +
+                </button>
+                <span className="text-xs text-ink-400">items</span>
+              </div>
+            </div>
           )}
 
           <Segmented

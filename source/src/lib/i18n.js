@@ -208,6 +208,10 @@ const HE = {
 
   // ---- upload + camera
   'Add an item': 'הוספת פריט',
+  Fewer: 'פחות',
+  More: 'יותר',
+  'Your closet is empty. Add an item to offer in return.': 'הארון שלכם ריק. הוסיפו פריט כדי להציע אותו בתמורה.',
+  "Add an item to offer. When you publish it, you'll go straight back to the swap.": 'הוסיפו פריט להצעה. אחרי הפרסום תחזרו ישר להחלפה.',
   'Cleaned': 'מוכן',
   'Re-capture': 'צילום מחדש',
   'Open camera': 'פתיחת מצלמה',

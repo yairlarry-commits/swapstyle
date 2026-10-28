@@ -81,7 +81,7 @@ function Shell() {
       screen = <ProfileScreen userId={route.userId} />;
       break;
     case 'upload':
-      screen = <UploadScreen />;
+      screen = <UploadScreen returnToSwap={route.returnToSwap} />;
       break;
     case 'offers':
       screen = <OffersScreen />;

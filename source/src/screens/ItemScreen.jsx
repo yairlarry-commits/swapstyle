@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, MapPin, Package, Repeat2, Check, MessageCircle, Clock, Truck, Handshake, EyeOff, Eye, Ban } from 'lucide-react';
+import { ArrowLeft, MapPin, Package, Repeat2, Check, MessageCircle, Clock, Truck, Handshake, EyeOff, Eye, Ban, Plus } from 'lucide-react';
 import { useRouter } from '../context/RouterContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { fetchItem, fetchAvailableItems, createSwapRequest, sendMessage, adminSetItemStatus, adminSetBanned } from '../lib/api.js';
 import { conditionLabel, garmentLabel, swapPrefLabel, timeAgo, SWAP_METHODS, SHIPPING_FEE, methodsAllowed } from '../lib/constants.js';
 import { Avatar, Button, ItemVisual, Sheet } from '../components/ui.jsx';
 import { AdminBox, ConfirmButton, ReportButton } from '../components/Moderation.jsx';
+import { takeReopenSwap } from '../lib/swapIntent.js';
 
 export function ItemScreen({ itemId }) {
   const { navigate, back } = useRouter();
@@ -13,7 +14,7 @@ export function ItemScreen({ itemId }) {
   const [item, setItem] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [swapOpen, setSwapOpen] = useState(false);
+  const [swapOpen, setSwapOpen] = useState(() => takeReopenSwap(itemId));
 
   useEffect(() => {
     let alive = true;
@@ -168,7 +169,10 @@ function SwapRequestSheet({ open, onClose, target }) {
     setMessage('');
     setMethod(methodsAllowed(target.owner?.swap_preference)[0]);
     fetchAvailableItems(user.id)
-      .then(setMine)
+      .then((list) => {
+        setMine(list);
+        if (list.length === 1) setSelected(list[0].id); // only one item: pick it
+      })
       .catch((e) => setError(e.message))
       .finally(() => setLoadingMine(false));
   }, [open, user]);
@@ -229,7 +233,10 @@ function SwapRequestSheet({ open, onClose, target }) {
               <div className="skeleton h-24 w-full rounded-2xl" />
             ) : mine.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-ink-200 p-5 text-center">
-                <p className="text-sm text-ink-500">Your closet is empty. Upload something first to start swapping.</p>
+                <p className="text-sm text-ink-500">Your closet is empty. Add an item to offer in return.</p>
+                <Button size="sm" className="mt-3" onClick={() => { onClose(); navigate({ name: 'upload', returnToSwap: target.id }); }}>
+                  <Plus size={15} /> Add an item
+                </Button>
               </div>
             ) : (
               <div className="no-scrollbar flex max-h-52 flex-col gap-2 overflow-y-auto pr-1">
