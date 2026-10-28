@@ -8,7 +8,6 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
-import android.view.View;
 import android.webkit.PermissionRequest;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -189,10 +188,14 @@ public class MainActivity extends Activity {
         }
     }
 
+    /** Back: let SwapStyle close an open window or go to the previous screen; leave the app only from the feed. */
     @Override
     public void onBackPressed() {
-        if (web.canGoBack()) web.goBack();
-        else super.onBackPressed();
+        web.evaluateJavascript("(function(){try{return !!(window.swapstyleBack && window.swapstyleBack());}catch(e){return false;}})()", value -> {
+            if ("true".equals(value)) return;
+            if (web.canGoBack()) web.goBack();
+            else finish();
+        });
     }
 
     @Override

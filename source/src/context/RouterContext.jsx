@@ -3,10 +3,15 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 
 const RouterContext = createContext(undefined);
 
+// Open overlays (sheets, camera), newest last: the Back button closes these first.
+const overlays = [];
+
 export function RouterProvider({ children }) {
   const [stack, setStack] = useState([{ name: 'feed' }]);
   const depth = useRef(1);
   depth.current = stack.length;
+  const stackRef = useRef(stack);
+  stackRef.current = stack;
 
   // Every screen is a browser-history entry, so the phone's Back button goes to the previous screen
   // and only leaves the app from the feed.
@@ -18,6 +23,8 @@ export function RouterProvider({ children }) {
   const navigate = useCallback(
     (route) => {
       if (route.name === 'feed') return toRoot();
+      const top = stackRef.current[stackRef.current.length - 1];
+      if (JSON.stringify(top) === JSON.stringify(route)) return; // already here
       setStack((s) => [...s, route]);
       window.history.pushState({ depth: depth.current + 1 }, '');
       window.scrollTo({ top: 0 });
@@ -39,7 +46,23 @@ export function RouterProvider({ children }) {
       setStack((s) => (d < s.length ? s.slice(0, d) : s));
     };
     window.addEventListener('popstate', onPop);
-    return () => window.removeEventListener('popstate', onPop);
+    // The Android app calls this for the phone's Back button: true = handled inside SwapStyle
+    window.swapstyleBack = () => {
+      const top = overlays[overlays.length - 1];
+      if (top) {
+        top.current?.();
+        return true;
+      }
+      if (depth.current > 1) {
+        window.history.back();
+        return true;
+      }
+      return false;
+    };
+    return () => {
+      window.removeEventListener('popstate', onPop);
+      delete window.swapstyleBack;
+    };
   }, []);
 
   return (
@@ -61,6 +84,7 @@ export function useBackToClose(open, onClose) {
   closeRef.current = onClose;
   useEffect(() => {
     if (!open) return;
+    overlays.push(closeRef);
     window.history.pushState({ depth: window.history.state?.depth ?? 1, overlay: true }, '');
     let popped = false;
     const onPop = () => {
@@ -69,6 +93,8 @@ export function useBackToClose(open, onClose) {
     };
     window.addEventListener('popstate', onPop);
     return () => {
+      const i = overlays.lastIndexOf(closeRef);
+      if (i >= 0) overlays.splice(i, 1);
       window.removeEventListener('popstate', onPop);
       // closed with a button: drop the extra history entry we added
       if (!popped && window.history.state?.overlay) window.history.back();
