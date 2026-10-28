@@ -3,7 +3,7 @@ import { Home, Plus, User, Inbox, X, Globe, MessageCircle } from 'lucide-react';
 import { getLang, setLang } from '../lib/i18n.js';
 import { GARMENT_STYLES, avatarGradient, initials } from '../lib/constants.js';
 import { SHAPE_W, SHAPE_H, garmentShape } from '../lib/garments.js';
-import { useRouter } from '../context/RouterContext.jsx';
+import { useRouter, useBackToClose } from '../context/RouterContext.jsx';
 import { useInbox } from '../context/InboxContext.jsx';
 
 // ---------- Button ----------
@@ -175,6 +175,7 @@ export function Corner({ className }) {
 
 // ---------- Bottom sheet / modal ----------
 export function Sheet({ open, onClose, children, title, sheet = true }) {
+  useBackToClose(open, onClose);
   useEffect(() => {
     if (!open) return;
     const onKey = (e) => e.key === 'Escape' && onClose();

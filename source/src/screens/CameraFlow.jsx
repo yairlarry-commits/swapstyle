@@ -7,6 +7,7 @@ import {
 import { CAMERA_TEMPLATES, garmentShape, templateForGarment } from '../lib/garments.js';
 import { FRAME_RATIO, cropImage, removeBackground, renderTransformed, toCard } from '../lib/imageClean.js';
 import { Button, Corner, GarmentOutline } from '../components/ui.jsx';
+import { useBackToClose } from '../context/RouterContext.jsx';
 
 const RESET = { x: 0, y: 0, scale: 1, rotation: 0 };
 const FULL = { x: 0, y: 0, w: 1, h: 1 };
@@ -192,6 +193,7 @@ export function CameraFlow({ open, garment, onClose, onComplete }) {
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-ink-950">
+      <BackCloses onClose={() => { stopCamera(); onClose(); }} />
       <div className="flex items-center justify-between px-5 pb-3 pt-safe">
         <button
           onClick={() => { stopCamera(); onClose(); }}
@@ -324,6 +326,12 @@ export function CameraFlow({ open, garment, onClose, onComplete }) {
 }
 
 // ---------- pieces ----------
+
+// While the camera is open, the phone's Back button closes it
+function BackCloses({ onClose }) {
+  useBackToClose(true, onClose);
+  return null;
+}
 
 // A tappable area that IS the file field (a <label> around an invisible input).
 // This opens the phone's camera / photo library on every browser, including iPhone,

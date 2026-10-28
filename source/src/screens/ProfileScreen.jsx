@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ArrowLeft, MapPin, Package, PenLine, Grid2x2, Sparkles, X, Check, LogOut, ShieldAlert, Ban } from 'lucide-react';
-import { useRouter } from '../context/RouterContext.jsx';
+import { useRouter, useBackToClose } from '../context/RouterContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { fetchProfile, fetchClosetItems, updateProfile, adminSetBanned } from '../lib/api.js';
 import { SWAP_PREFERENCES, conditionLabel, swapPrefLabel } from '../lib/constants.js';
@@ -216,6 +216,7 @@ function ClosetCard({ item, onClick }) {
 }
 
 function EditProfileSheet({ form, setForm, onSave, onCancel, saving }) {
+  useBackToClose(true, onCancel);
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
       <div className="absolute inset-0 bg-ink-950/40 backdrop-blur-sm" onClick={onCancel} />
