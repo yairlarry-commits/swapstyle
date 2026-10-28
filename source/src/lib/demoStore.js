@@ -159,6 +159,7 @@ export const demoStore = {
       .filter((i) => !f.size || f.size === 'all' || i.size === f.size)
       .filter((i) => !f.itemType || f.itemType === 'all' || i.item_type === f.itemType)
       .filter((i) => !f.kidsAge || f.kidsAge === 'all' || i.kids_age_group === f.kidsAge)
+      .filter((i) => !f.listing || f.listing === 'all' || (i.listing || 'swap') === f.listing)
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
       .slice(0, 60)
       .map((i) => demoWithOwner(db, i));

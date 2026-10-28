@@ -1,17 +1,17 @@
 import { useState } from 'react';
-import { X, WandSparkles, RefreshCw, Camera, Package, Check, Shirt } from 'lucide-react';
+import { X, WandSparkles, RefreshCw, Camera, Package, Check, Shirt, Grid2x2 } from 'lucide-react';
 import { useRouter } from '../context/RouterContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { createItem } from '../lib/api.js';
 import { reopenSwapFor } from '../lib/swapIntent.js';
-import { CATEGORIES, SIZES, ONE_SIZE, KIDS_AGES, ITEM_TYPES, CONDITIONS, GARMENTS, GARMENT_STYLES } from '../lib/constants.js';
+import { CATEGORIES, SIZES, ONE_SIZE, KIDS_AGES, ITEM_TYPES, CONDITIONS, GARMENTS, GARMENT_STYLES, LISTINGS } from '../lib/constants.js';
 import { Button, Corner, ItemVisual } from '../components/ui.jsx';
 import { CameraFlow } from './CameraFlow.jsx';
 
 const MAX_BUNDLE = 100;
 const clampBundle = (v) => Math.max(2, Math.min(MAX_BUNDLE, Math.round(Number(v)) || 2));
 
-export function UploadScreen({ returnToSwap = null }) {
+export function UploadScreen({ returnToSwap = null, listing: startListing = 'swap' }) {
   const { navigate, back } = useRouter();
   const { user } = useAuth();
   const [photo, setPhoto] = useState(null);
@@ -27,6 +27,7 @@ export function UploadScreen({ returnToSwap = null }) {
     condition: 'like_new',
     garment: 'tshirt',
     color: '',
+    listing: returnToSwap ? 'swap' : startListing === 'give' ? 'give' : 'swap',
   });
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState(null);
@@ -62,12 +63,13 @@ export function UploadScreen({ returnToSwap = null }) {
         garment_type: garmentType,
         color: form.color.trim() || null,
         image_url: photo,
+        listing: form.listing,
       });
       if (returnToSwap) {
         // came from "Offer a swap" with an empty closet: go back and reopen the offer
         reopenSwapFor(returnToSwap);
         back();
-      } else navigate({ name: 'profile' });
+      } else navigate({ name: 'profile', closet: form.listing });
     } catch (e) {
       setError(e.message);
     } finally {
@@ -129,6 +131,19 @@ export function UploadScreen({ returnToSwap = null }) {
         </button>
 
         <div className="mt-6 flex flex-col gap-5">
+          {!returnToSwap && (
+            <Segmented
+              label="Which closet?"
+              icon={<Grid2x2 size={14} />}
+              options={LISTINGS}
+              value={form.listing}
+              onChange={(v) => setForm({ ...form, listing: v })}
+            />
+          )}
+          {form.listing === 'give' && (
+            <p className="-mt-2 text-[11px] text-ink-500">Free to a good home: people can ask for it without offering anything back.</p>
+          )}
+
           <Segmented
             label="What are you listing?"
             icon={<Package size={14} />}

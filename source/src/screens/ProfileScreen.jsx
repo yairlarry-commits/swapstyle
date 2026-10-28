@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowLeft, MapPin, Package, PenLine, Grid2x2, Sparkles, X, Check, LogOut, ShieldAlert, Ban } from 'lucide-react';
+import { ArrowLeft, MapPin, Package, PenLine, Grid2x2, Sparkles, X, Check, LogOut, ShieldAlert, Ban, Repeat2, Gift, Plus } from 'lucide-react';
 import { useRouter, useBackToClose } from '../context/RouterContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { fetchProfile, fetchClosetItems, updateProfile, adminSetBanned } from '../lib/api.js';
-import { SWAP_PREFERENCES, conditionLabel, swapPrefLabel } from '../lib/constants.js';
+import { SWAP_PREFERENCES, conditionLabel, swapPrefLabel, isGiveaway } from '../lib/constants.js';
 import { Avatar, Button, ItemVisual, LanguageToggle } from '../components/ui.jsx';
 import { AdminBox, ConfirmButton, ReportButton } from '../components/Moderation.jsx';
 
-export function ProfileScreen({ userId }) {
+export function ProfileScreen({ userId, closet: startCloset }) {
   const { navigate, back } = useRouter();
   const { user, refreshProfile, signOut, profile: me } = useAuth();
   const profileId = userId ?? user?.id;
@@ -19,6 +19,7 @@ export function ProfileScreen({ userId }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ username: '', city: '', swap_preference: 'either' });
   const [saving, setSaving] = useState(false);
+  const [closet, setCloset] = useState(startCloset === 'give' ? 'give' : 'swap');
 
   const load = useCallback(async () => {
     if (!profileId) return;
@@ -60,6 +61,9 @@ export function ProfileScreen({ userId }) {
 
   const available = items.filter((i) => i.status === 'available');
   const swapped = items.filter((i) => i.status === 'swapped');
+  const giveItems = items.filter(isGiveaway);
+  const swapItems = items.filter((i) => !isGiveaway(i));
+  const shown = closet === 'give' ? giveItems : swapItems;
 
   return (
     <div className="min-h-screen bg-sand-50 pb-24">
@@ -154,20 +158,37 @@ export function ProfileScreen({ userId }) {
             </div>
 
             <div className="mt-6 flex items-center justify-between">
-              <h2 className="flex items-center gap-1.5 font-display text-lg font-semibold text-ink-900"><Grid2x2 size={17} /> Closet</h2>
+              <h2 className="flex items-center gap-1.5 font-display text-lg font-semibold text-ink-900"><Grid2x2 size={17} /> Closets</h2>
               <span className="text-xs text-ink-400">{items.length} items</span>
             </div>
+            <div className="mt-3 grid grid-cols-2 gap-1 rounded-2xl bg-white p-1 shadow-card">
+              {[
+                ['swap', Repeat2, 'To swap', swapItems.length],
+                ['give', Gift, 'To give away', giveItems.length],
+              ].map(([id, Icon, label, n]) => (
+                <button
+                  key={id}
+                  onClick={() => setCloset(id)}
+                  className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-semibold transition ${closet === id ? 'bg-ink-900 text-white' : 'text-ink-500'}`}
+                >
+                  <Icon size={15} /> {label}
+                  <span className={`rounded-full px-1.5 text-[11px] ${closet === id ? 'bg-white/20' : 'bg-ink-100'}`}>{n}</span>
+                </button>
+              ))}
+            </div>
 
-            {items.length === 0 ? (
+            {shown.length === 0 ? (
               <div className="mt-4 flex flex-col items-center rounded-3xl border border-dashed border-ink-200 bg-white px-6 py-12 text-center">
                 <Sparkles size={24} className="text-ink-300" />
-                <p className="mt-2 font-medium text-ink-900">{isMe ? 'Your closet is empty' : 'No items yet'}</p>
-                <p className="mt-1 max-w-[220px] text-xs text-ink-500">{isMe ? 'Upload your first piece to start swapping.' : 'Check back soon for new drops.'}</p>
-                {isMe && <Button className="mt-4" onClick={() => navigate({ name: 'upload' })}>Upload an item</Button>}
+                <p className="mt-2 font-medium text-ink-900">{isMe ? (closet === 'give' ? 'Nothing to give away yet' : 'Your closet is empty') : 'No items yet'}</p>
+                <p className="mt-1 max-w-[220px] text-xs text-ink-500">
+                  {isMe ? (closet === 'give' ? 'Clothes you want to give for free go here.' : 'Upload your first piece to start swapping.') : 'Check back soon for new drops.'}
+                </p>
+                {isMe && <Button className="mt-4" onClick={() => navigate({ name: 'upload', listing: closet })}><Plus size={15} /> Add an item</Button>}
               </div>
             ) : (
               <div className="mt-3 grid grid-cols-2 gap-3">
-                {items.map((it) => (
+                {shown.map((it) => (
                   <ClosetCard key={it.id} item={it} onClick={() => navigate({ name: 'item', itemId: it.id })} />
                 ))}
               </div>
@@ -200,7 +221,7 @@ function ClosetCard({ item, onClick }) {
         </div>
         {item.status === 'swapped' && (
           <div className="absolute inset-0 grid place-items-center bg-ink-900/40">
-            <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-ink-900">Swapped</span>
+            <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-ink-900">{isGiveaway(item) ? 'Given' : 'Swapped'}</span>
           </div>
         )}
         {item.item_type === 'bundle' && (

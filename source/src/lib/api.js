@@ -67,8 +67,13 @@ export async function fetchFeed(filters) {
   if (filters.size && filters.size !== 'all') q = q.eq('size', filters.size);
   if (filters.itemType && filters.itemType !== 'all') q = q.eq('item_type', filters.itemType);
   if (filters.kidsAge && filters.kidsAge !== 'all') q = q.eq('kids_age_group', filters.kidsAge);
+  if (filters.listing && filters.listing !== 'all') q = q.eq('listing', filters.listing);
   const { data, error } = await q.limit(60);
-  if (error) throw error;
+  if (error) {
+    // giveaway closet not set up yet (migration_004): show everything as "to swap"
+    if (/listing/i.test(error.message || '')) return filters.listing === 'give' ? [] : fetchFeed({ ...filters, listing: 'all' });
+    throw error;
+  }
   return data ?? [];
 }
 
@@ -87,17 +92,26 @@ export async function fetchClosetItems(ownerId) {
   return data ?? [];
 }
 
-// Only items that can still be offered in a swap
+// Only items that can still be offered in a swap (from the swap closet)
 export async function fetchAvailableItems(ownerId) {
-  if (DEMO_MODE) return demoStore.itemsByOwner(ownerId, true);
-  const { data, error } = await supabase.from('items').select('*').eq('owner_id', ownerId).eq('status', 'available').order('created_at', { ascending: false });
-  if (error) throw error;
-  return data ?? [];
+  let list;
+  if (DEMO_MODE) list = await demoStore.itemsByOwner(ownerId, true);
+  else {
+    const { data, error } = await supabase.from('items').select('*').eq('owner_id', ownerId).eq('status', 'available').order('created_at', { ascending: false });
+    if (error) throw error;
+    list = data ?? [];
+  }
+  return list.filter((i) => i.listing !== 'give');
 }
 
 export async function createItem(row) {
   if (DEMO_MODE) return demoStore.createItem(row);
-  const { data, error } = await supabase.from('items').insert(row).select('*').single();
+  let { data, error } = await supabase.from('items').insert(row).select('*').single();
+  if (error && /listing/i.test(error.message || '')) {
+    if (row.listing === 'give') throw new Error('The giveaway closet is not set up yet: run supabase/RUN_THIS_ONCE.sql in Supabase.');
+    const { listing, ...rest } = row;
+    ({ data, error } = await supabase.from('items').insert(rest).select('*').single());
+  }
   if (error) throw error;
   return data;
 }
@@ -111,7 +125,10 @@ export async function createSwapRequest(row) {
     const { method, ...rest } = row;
     ({ data, error } = await supabase.from('swap_requests').insert(rest).select('*').single());
   }
-  if (error) throw error;
+  if (error) {
+    if (!row.offered_item_id && /offered_item_id|null value|row-level security/i.test(error.message || '')) throw new Error('Asking for free items is not set up yet: run supabase/RUN_THIS_ONCE.sql in Supabase.');
+    throw error;
+  }
   return data;
 }
 
@@ -151,8 +168,11 @@ export async function fetchSwap(id) {
 // Save part of a swap: method, addresses, payment, tracking, "done" confirmations, status
 export async function patchSwap(id, patch) {
   if (DEMO_MODE) return demoStore.patchSwap(id, patch);
-  const { error } = await supabase.from('swap_requests').update({ ...patch, updated_at: new Date().toISOString() }).eq('id', id);
-  if (error) throw error;
+  const { data, error } = await supabase.from('swap_requests').update({ ...patch, updated_at: new Date().toISOString() }).eq('id', id).select('id');
+  const notSetUp = 'This could not be saved yet: the database needs an update (run supabase/RUN_THIS_ONCE.sql in Supabase).';
+  if (error) throw /column|schema cache|check constraint/i.test(error.message || '') ? new Error(notSetUp) : error;
+  // the database silently refused (old rules let only the item owner update a swap)
+  if (!data || data.length === 0) throw new Error(notSetUp);
 }
 
 export async function fetchMessages(swapId) {

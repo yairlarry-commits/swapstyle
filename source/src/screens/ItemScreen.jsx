@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, MapPin, Package, Repeat2, Check, MessageCircle, Clock, Truck, Handshake, EyeOff, Eye, Ban, Plus } from 'lucide-react';
+import { ArrowLeft, MapPin, Package, Repeat2, Check, MessageCircle, Clock, Truck, Handshake, EyeOff, Eye, Ban, Plus, Gift } from 'lucide-react';
 import { useRouter } from '../context/RouterContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { fetchItem, fetchAvailableItems, createSwapRequest, sendMessage, adminSetItemStatus, adminSetBanned } from '../lib/api.js';
-import { conditionLabel, garmentLabel, swapPrefLabel, timeAgo, SWAP_METHODS, SHIPPING_FEE, methodsAllowed } from '../lib/constants.js';
+import { conditionLabel, garmentLabel, swapPrefLabel, timeAgo, SWAP_METHODS, SHIPPING_FEE, methodsAllowed, isGiveaway } from '../lib/constants.js';
 import { Avatar, Button, ItemVisual, Sheet } from '../components/ui.jsx';
 import { AdminBox, ConfirmButton, ReportButton } from '../components/Moderation.jsx';
 import { takeReopenSwap } from '../lib/swapIntent.js';
@@ -53,6 +53,7 @@ export function ItemScreen({ itemId }) {
   }
 
   const owner = item.owner;
+  const gift = isGiveaway(item);
   return (
     <div className="min-h-screen bg-white pb-32">
       <BackBar onBack={back} />
@@ -63,6 +64,7 @@ export function ItemScreen({ itemId }) {
             <span className="rounded-full bg-white/95 px-3 py-1 text-xs font-semibold text-ink-900 shadow-sm">{item.size}</span>
             <span className="rounded-full bg-ink-900/85 px-3 py-1 text-xs font-semibold text-white">{conditionLabel(item.condition)}</span>
             {item.item_type === 'bundle' && <span className="rounded-full bg-sand-500 px-3 py-1 text-xs font-semibold text-white">Bundle · {item.bundle_count}</span>}
+            {gift && <span className="inline-flex items-center gap-1 rounded-full bg-sage-600 px-3 py-1 text-xs font-semibold text-white"><Gift size={12} /> Giveaway</span>}
           </div>
         </div>
 
@@ -89,14 +91,14 @@ export function ItemScreen({ itemId }) {
 
           {!isMine && item.status === 'available' && (
             <Button size="lg" className="mt-6 w-full" onClick={() => setSwapOpen(true)}>
-              <Repeat2 size={18} /> Request Swap
+              {gift ? <Gift size={18} /> : <Repeat2 size={18} />} {gift ? 'I want it' : 'Request Swap'}
             </Button>
           )}
           {isMine && (
-            <div className="mt-6 rounded-2xl bg-ink-50 px-4 py-3 text-center text-sm text-ink-500">This is your item. Waiting for swap requests.</div>
+            <div className="mt-6 rounded-2xl bg-ink-50 px-4 py-3 text-center text-sm text-ink-500">{gift ? 'This is your item, free to give away. Waiting for requests.' : 'This is your item. Waiting for swap requests.'}</div>
           )}
           {item.status === 'swapped' && (
-            <div className="mt-6 rounded-2xl bg-sage-50 px-4 py-3 text-center text-sm text-sage-700">Already swapped — congrats!</div>
+            <div className="mt-6 rounded-2xl bg-sage-50 px-4 py-3 text-center text-sm text-sage-700">{gift ? 'Already given away.' : 'Already swapped — congrats!'}</div>
           )}
           {item.status === 'removed' && (
             <div className="mt-6 rounded-2xl bg-accent-50 px-4 py-3 text-center text-sm text-accent-700">This item was removed and isn't visible in the feed.</div>
@@ -159,6 +161,7 @@ function SwapRequestSheet({ open, onClose, target }) {
   const [loadingMine, setLoadingMine] = useState(false);
   const [error, setError] = useState(null);
   const [sent, setSent] = useState(false);
+  const gift = isGiveaway(target);
 
   useEffect(() => {
     if (!open || !user) return;
@@ -168,6 +171,10 @@ function SwapRequestSheet({ open, onClose, target }) {
     setSelected(null);
     setMessage('');
     setMethod(methodsAllowed(target.owner?.swap_preference)[0]);
+    if (gift) {
+      setLoadingMine(false);
+      return;
+    }
     fetchAvailableItems(user.id)
       .then((list) => {
         setMine(list);
@@ -180,14 +187,14 @@ function SwapRequestSheet({ open, onClose, target }) {
   const selectedItem = useMemo(() => mine.find((m) => m.id === selected) ?? null, [mine, selected]);
 
   const send = async () => {
-    if (!selected) {
+    if (!selected && !gift) {
       setError('Pick one of your items to offer.');
       return;
     }
     setSending(true);
     setError(null);
     try {
-      const created = await createSwapRequest({ requested_item_id: target.id, offered_item_id: selected, message: message.trim() || undefined, method });
+      const created = await createSwapRequest({ requested_item_id: target.id, offered_item_id: gift ? null : selected, message: message.trim() || undefined, method });
       if (message.trim()) await sendMessage(created.id, message.trim()).catch(() => {});
       setSentId(created.id);
       setSent(true);
@@ -199,7 +206,7 @@ function SwapRequestSheet({ open, onClose, target }) {
   };
 
   return (
-    <Sheet open={open} onClose={onClose} title={sent ? 'Swap requested' : 'Offer a swap'}>
+    <Sheet open={open} onClose={onClose} title={sent ? (gift ? 'Request sent' : 'Swap requested') : gift ? 'Ask for this item' : 'Offer a swap'}>
       {sent ? (
         <div className="flex flex-col items-center py-6 text-center">
           <div className="mb-4 grid h-16 w-16 place-items-center rounded-full bg-sage-100 text-sage-700">
@@ -225,6 +232,12 @@ function SwapRequestSheet({ open, onClose, target }) {
             </div>
           </div>
 
+          {gift ? (
+            <div className="flex items-start gap-2 rounded-2xl bg-sage-50 px-4 py-3 text-sm text-sage-700">
+              <Gift size={17} className="mt-0.5 shrink-0" />
+              <p>This item is free. Nothing to offer in return: just ask, and agree on the handover in the chat.</p>
+            </div>
+          ) : (
           <div>
             <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.15em] text-ink-400">
               <Repeat2 size={13} /> Pick an item to offer
@@ -259,9 +272,10 @@ function SwapRequestSheet({ open, onClose, target }) {
               </div>
             )}
           </div>
+          )}
 
           <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-ink-400">How to swap</p>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-ink-400">{gift ? 'How to hand it over' : 'How to swap'}</p>
             <div className="grid grid-cols-2 gap-2">
               {SWAP_METHODS.map((m) => {
                 const can = allowed.includes(m.id);
@@ -279,7 +293,7 @@ function SwapRequestSheet({ open, onClose, target }) {
                       {m.id === 'shipping' ? <Truck size={15} /> : <Handshake size={15} />} {m.label}
                     </span>
                     <span className="mt-0.5 text-[11px] leading-snug text-ink-500">
-                      {m.id === 'shipping' ? `Each side pays ₪${SHIPPING_FEE} shipping` : m.hint}
+                      {m.id === 'shipping' ? (gift ? `You pay ₪${SHIPPING_FEE} shipping` : `Each side pays ₪${SHIPPING_FEE} shipping`) : m.hint}
                     </span>
                   </button>
                 );
@@ -306,7 +320,7 @@ function SwapRequestSheet({ open, onClose, target }) {
               <Clock size={13} /> Offering your {selectedItem.title} for their {target.title}.
             </div>
           )}
-          <Button size="lg" className="w-full" loading={sending} disabled={!selected} onClick={send}>Send swap request</Button>
+          <Button size="lg" className="w-full" loading={sending} disabled={!selected && !gift} onClick={send}>{gift ? 'Send request' : 'Send swap request'}</Button>
         </div>
       )}
     </Sheet>

@@ -20,6 +20,13 @@ export const KIDS_AGES = [
   { id: '9-12y', label: '9–12y' },
 ];
 
+// The two closets every profile has
+export const LISTINGS = [
+  { id: 'swap', label: 'To swap' },
+  { id: 'give', label: 'To give away' },
+];
+export const isGiveaway = (item) => item?.listing === 'give';
+
 export const ITEM_TYPES = [
   { id: 'single', label: 'Single' },
   { id: 'bundle', label: 'Bundle' },

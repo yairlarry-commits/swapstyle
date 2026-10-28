@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { SlidersHorizontal, X, Home } from 'lucide-react';
+import { SlidersHorizontal, X, Home, Gift } from 'lucide-react';
 import { useRouter } from '../context/RouterContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { fetchFeed } from '../lib/api.js';
-import { CATEGORIES, SIZES, KIDS_AGES, ITEM_TYPES, conditionLabel, timeAgo } from '../lib/constants.js';
+import { CATEGORIES, SIZES, KIDS_AGES, ITEM_TYPES, conditionLabel, timeAgo, isGiveaway } from '../lib/constants.js';
 import { AppHeader, Avatar, Chip, ItemVisual } from '../components/ui.jsx';
 
 export function FeedScreen() {
@@ -12,7 +12,7 @@ export function FeedScreen() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filters, setFilters] = useState({ category: 'all', size: 'all', itemType: 'all', kidsAge: 'all' });
+  const [filters, setFilters] = useState({ category: 'all', size: 'all', itemType: 'all', kidsAge: 'all', listing: 'all' });
   const [showMore, setShowMore] = useState(false);
 
   const load = useCallback(async () => {
@@ -34,7 +34,7 @@ export function FeedScreen() {
   const isKids = filters.category === 'kids';
   const sizeOptions = isKids ? KIDS_AGES.map((a) => a.id) : SIZES;
   const isAcc = filters.category === 'accessories';
-  const extraActive = filters.size !== 'all' || filters.itemType !== 'all';
+  const extraActive = filters.size !== 'all' || filters.itemType !== 'all' || filters.listing !== 'all';
 
   return (
     <div className="min-h-screen bg-sand-50 pb-24">
@@ -57,6 +57,11 @@ export function FeedScreen() {
 
           {showMore && (
             <div className="mt-3 flex flex-col gap-3 rounded-2xl bg-white p-3 shadow-card animate-scale-in">
+              <FilterRow label="Closet">
+                <Chip label="Any" small active={filters.listing === 'all'} onClick={() => setFilters((f) => ({ ...f, listing: 'all' }))} />
+                <Chip label="To swap" small active={filters.listing === 'swap'} onClick={() => setFilters((f) => ({ ...f, listing: 'swap' }))} />
+                <Chip label="Giveaway" small active={filters.listing === 'give'} onClick={() => setFilters((f) => ({ ...f, listing: 'give' }))} />
+              </FilterRow>
               <FilterRow label="Type">
                 <Chip label="Any" small active={filters.itemType === 'all'} onClick={() => setFilters((f) => ({ ...f, itemType: 'all' }))} />
                 {ITEM_TYPES.map((t) => (
@@ -76,7 +81,7 @@ export function FeedScreen() {
                 ))}
               </FilterRow>}
               {extraActive && (
-                <button onClick={() => setFilters((f) => ({ ...f, size: 'all', itemType: 'all' }))} className="flex items-center justify-center gap-1 text-xs font-medium text-ink-500">
+                <button onClick={() => setFilters((f) => ({ ...f, size: 'all', itemType: 'all', listing: 'all' }))} className="flex items-center justify-center gap-1 text-xs font-medium text-ink-500">
                   <X size={13} /> Clear filters
                 </button>
               )}
@@ -121,6 +126,9 @@ function FeedCard({ item, onOpen }) {
           <span className="rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-semibold text-ink-900 shadow-sm backdrop-blur">{item.size}</span>
           <span className="rounded-full bg-ink-900/85 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur">{conditionLabel(item.condition)}</span>
         </div>
+        {isGiveaway(item) && (
+          <span className="absolute bottom-3 left-3 inline-flex items-center gap-1 rounded-full bg-sage-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm"><Gift size={12} /> Giveaway</span>
+        )}
         {isBundle && (
           <span className="absolute right-3 top-3 rounded-full bg-sand-500 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm">Bundle · {item.bundle_count}</span>
         )}
@@ -128,7 +136,7 @@ function FeedCard({ item, onOpen }) {
           onClick={(e) => { e.stopPropagation(); onOpen(); }}
           className="absolute bottom-3 right-3 rounded-full bg-ink-900 px-4 py-2 text-xs font-semibold text-white shadow-float transition active:scale-95"
         >
-          Request Swap
+          {isGiveaway(item) ? 'I want it' : 'Request Swap'}
         </button>
       </div>
       <div className="flex items-start justify-between gap-3 px-4 py-3">

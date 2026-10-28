@@ -78,10 +78,10 @@ function Shell() {
       screen = <ItemScreen itemId={route.itemId} />;
       break;
     case 'profile':
-      screen = <ProfileScreen userId={route.userId} />;
+      screen = <ProfileScreen userId={route.userId} closet={route.closet} />;
       break;
     case 'upload':
-      screen = <UploadScreen returnToSwap={route.returnToSwap} />;
+      screen = <UploadScreen key={route.listing || 'swap'} returnToSwap={route.returnToSwap} listing={route.listing} />;
       break;
     case 'offers':
       screen = <OffersScreen />;

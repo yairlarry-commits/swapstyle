@@ -1,7 +1,7 @@
 // One swap: the two items, how it happens (meet / shipping), each side's steps, and a chat.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ArrowLeft, Repeat2, Send, Check, X, MapPin, Truck, Handshake, CreditCard, Package, Clock, PartyPopper, Copy, Lock,
+  ArrowLeft, Repeat2, Send, Check, X, MapPin, Truck, Handshake, CreditCard, Package, Clock, PartyPopper, Copy, Lock, Gift,
 } from 'lucide-react';
 import { useRouter } from '../context/RouterContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -13,6 +13,9 @@ import { Avatar, Button, ItemVisual } from '../components/ui.jsx';
 import { ReportButton } from '../components/Moderation.jsx';
 
 const POLL_MS = 3000;
+
+// Both sides confirmed (a free item: the receiver confirmed)
+const isFinished = (s) => !!s.requester_done && (!!s.owner_done || !s.offered_item_id);
 
 export function SwapScreen({ swapId }) {
   const { back, navigate } = useRouter();
@@ -44,6 +47,14 @@ export function SwapScreen({ swapId }) {
     return () => clearInterval(t);
   }, [load]);
 
+  // both confirmed (maybe at the same moment) but not marked complete yet: finish it
+  const healing = useRef(false);
+  useEffect(() => {
+    if (!swap || healing.current || swap.status === 'completed' || swap.status === 'declined' || !isFinished(swap)) return;
+    healing.current = true;
+    patchSwap(swap.id, { status: 'completed' }).then(load, () => {});
+  }, [swap, load]);
+
   // opening the conversation marks everything in it as read
   useEffect(() => {
     if (!swap) return;
@@ -65,6 +76,7 @@ export function SwapScreen({ swapId }) {
   const partner = swap ? (mySide === 'requester' ? swap.requested_item?.owner : swap.requester) : null;
   const myItem = swap ? (mySide === 'requester' ? swap.offered_item : swap.requested_item) : null;
   const theirItem = swap ? (mySide === 'requester' ? swap.requested_item : swap.offered_item) : null;
+  const gift = !!swap && !swap.offered_item_id;
 
   const update = async (key, patch) => {
     setBusy(key);
@@ -72,7 +84,7 @@ export function SwapScreen({ swapId }) {
     try {
       // finishing: both sides confirmed → the swap is complete
       const next = { ...swap, ...patch };
-      if (next.requester_done && next.owner_done && swap.status !== 'completed') patch = { ...patch, status: 'completed' };
+      if (isFinished(next) && swap.status !== 'completed') patch = { ...patch, status: 'completed' };
       await patchSwap(swap.id, patch);
       if (patch.status === 'completed') playSound('swap-accepted');
       await load();
@@ -124,12 +136,17 @@ export function SwapScreen({ swapId }) {
       </header>
 
       <div className="mx-auto flex max-w-md flex-col gap-4 px-4 py-4">
-        <ItemsCard myItem={myItem} theirItem={theirItem} onOpen={(id) => navigate({ name: 'item', itemId: id })} />
+        {gift ? (
+          <GiftCard item={swap.requested_item} giving={mySide === 'owner'} onOpen={(id) => navigate({ name: 'item', itemId: id })} />
+        ) : (
+          <ItemsCard myItem={myItem} theirItem={theirItem} onOpen={(id) => navigate({ name: 'item', itemId: id })} />
+        )}
 
-        <MethodCard swap={swap} ownerPref={swap.requested_item?.owner?.swap_preference} busy={busy} onChange={(m) => update('method', { method: m })} />
+        <MethodCard gift={gift} swap={swap} ownerPref={swap.requested_item?.owner?.swap_preference} busy={busy} onChange={(m) => update('method', { method: m })} />
 
         {swap.status === 'pending' && (
           <PendingCard
+            gift={gift}
             isOwner={ownerId === me}
             partner={partner}
             busy={busy}
@@ -140,17 +157,21 @@ export function SwapScreen({ swapId }) {
 
         {(swap.status === 'accepted' || swap.status === 'completed') &&
           (swap.method === 'shipping' ? (
-            <ShippingSteps swap={swap} mySide={mySide} theirSide={theirSide} partner={partner} busy={busy} update={update} />
+            gift ? (
+              <GiftShippingSteps swap={swap} mySide={mySide} partner={partner} busy={busy} update={update} />
+            ) : (
+              <ShippingSteps swap={swap} mySide={mySide} theirSide={theirSide} partner={partner} busy={busy} update={update} />
+            )
           ) : (
-            <MeetSteps swap={swap} mySide={mySide} theirSide={theirSide} partner={partner} busy={busy} update={update} />
+            <MeetSteps gift={gift} swap={swap} mySide={mySide} theirSide={theirSide} partner={partner} busy={busy} update={update} />
           ))}
 
         {swap.status === 'completed' && (
           <div className="flex items-center gap-3 rounded-3xl bg-sage-100 p-4 text-sage-700">
             <PartyPopper size={22} />
             <div>
-              <p className="font-display text-base font-semibold">Swap complete!</p>
-              <p className="text-xs">Enjoy your new piece. Thanks for swapping instead of buying.</p>
+              <p className="font-display text-base font-semibold">{gift ? 'Handed over!' : 'Swap complete!'}</p>
+              <p className="text-xs">{gift ? 'The item found a new home. Thanks for giving it a second life.' : 'Enjoy your new piece. Thanks for swapping instead of buying.'}</p>
             </div>
           </div>
         )}
@@ -180,6 +201,20 @@ function StatusPill({ status }) {
   return <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${cls}`}>{label}</span>;
 }
 
+function GiftCard({ item, giving, onOpen }) {
+  return (
+    <button onClick={() => item && onOpen(item.id)} className="flex items-center gap-3 rounded-3xl bg-white p-3 text-start shadow-card">
+      <ItemVisual garment={item?.garment_type} color={item?.color} imageUrl={item?.image_url} className="aspect-[4/5] w-24 shrink-0 rounded-2xl" />
+      <div className="min-w-0">
+        <span className="inline-flex items-center gap-1 rounded-full bg-sage-100 px-2.5 py-1 text-[11px] font-semibold text-sage-700"><Gift size={12} /> Giveaway</span>
+        <p className="mt-1.5 truncate text-sm font-semibold text-ink-900">{item?.title}</p>
+        <p className="text-xs text-ink-500">{item && `${item.size} · ${conditionLabel(item.condition)}`}</p>
+        <p className="mt-1 text-[11px] text-ink-400">{giving ? 'You are giving this item away' : 'You are getting this item for free'}</p>
+      </div>
+    </button>
+  );
+}
+
 function ItemsCard({ myItem, theirItem, onOpen }) {
   const Side = ({ label, item }) => (
     <button onClick={() => item && onOpen(item.id)} className="flex min-w-0 flex-1 flex-col items-center gap-1.5 text-center">
@@ -198,13 +233,13 @@ function ItemsCard({ myItem, theirItem, onOpen }) {
   );
 }
 
-function MethodCard({ swap, ownerPref, busy, onChange }) {
+function MethodCard({ gift, swap, ownerPref, busy, onChange }) {
   const allowed = methodsAllowed(ownerPref);
   const locked = swap.requester_paid || swap.owner_paid || swap.requester_done || swap.owner_done || ['completed', 'declined'].includes(swap.status);
   return (
     <div className="rounded-3xl bg-white p-4 shadow-card">
       <p className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-ink-400">
-        How the swap happens {locked && <Lock size={11} />}
+        {gift ? 'How it is handed over' : 'How the swap happens'} {locked && <Lock size={11} />}
       </p>
       <div className="grid grid-cols-2 gap-2">
         {SWAP_METHODS.map((m) => {
@@ -223,7 +258,7 @@ function MethodCard({ swap, ownerPref, busy, onChange }) {
               <Icon size={18} />
               <span className="text-sm font-semibold">{m.label}</span>
               <span className={`text-[11px] leading-snug ${on ? 'text-white/70' : 'text-ink-400'}`}>
-                {m.id === 'shipping' ? `Each side pays ₪${SHIPPING_FEE}` : m.hint}
+                {m.id === 'shipping' ? (gift ? `The receiver pays ₪${SHIPPING_FEE}` : `Each side pays ₪${SHIPPING_FEE}`) : m.hint}
               </span>
             </button>
           );
@@ -236,12 +271,12 @@ function MethodCard({ swap, ownerPref, busy, onChange }) {
   );
 }
 
-function PendingCard({ isOwner, partner, busy, onAccept, onDecline }) {
+function PendingCard({ gift, isOwner, partner, busy, onAccept, onDecline }) {
   return (
     <div className="rounded-3xl bg-white p-4 shadow-card">
       {isOwner ? (
         <>
-          <p className="text-sm font-semibold text-ink-900"><bdi>@{partner?.username}</bdi> wants to swap with you</p>
+          <p className="text-sm font-semibold text-ink-900"><bdi>@{partner?.username}</bdi> {gift ? 'would like your item' : 'wants to swap with you'}</p>
           <p className="mt-0.5 text-xs text-ink-500">Chat below if you have questions, then decide.</p>
           <div className="mt-3 flex gap-2">
             <Button variant="outline" className="flex-1" loading={busy === 'decline'} onClick={onDecline}><X size={15} /> Decline</Button>
@@ -285,9 +320,34 @@ function TheirStatus({ partner, ok, text, waiting }) {
   );
 }
 
-function MeetSteps({ swap, mySide, theirSide, partner, busy, update }) {
+function MeetSteps({ gift, swap, mySide, theirSide, partner, busy, update }) {
   const iDone = swap[mySide + '_done'];
   const theyDone = swap[theirSide + '_done'];
+  if (gift) {
+    const receiving = mySide === 'requester';
+    const got = swap.requester_done;
+    return (
+      <div className="rounded-3xl bg-white p-4 shadow-card">
+        <p className="mb-3 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-ink-400"><Handshake size={12} /> Meet-up steps</p>
+        <Step n={1} done active title="Agree on a time and place">
+          <p className="text-xs text-ink-500">Use the chat below. Pick a public place you both know.</p>
+        </Step>
+        <Step n={2} done={got} active={!got} title="Hand over the item">
+          {receiving ? (
+            got ? (
+              <p className="flex items-center gap-1.5 text-xs text-sage-700"><Check size={13} /> You confirmed you got it</p>
+            ) : (
+              <Button size="sm" loading={busy === 'done'} onClick={() => update('done', { requester_done: true })}>
+                <Check size={14} /> I got the item
+              </Button>
+            )
+          ) : (
+            <TheirStatus partner={partner} ok={got} text="got the item" waiting="will confirm once they get it" />
+          )}
+        </Step>
+      </div>
+    );
+  }
   return (
     <div className="rounded-3xl bg-white p-4 shadow-card">
       <p className="mb-3 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-ink-400"><Handshake size={12} /> Meet-up steps</p>
@@ -381,6 +441,87 @@ function ShippingSteps({ swap, mySide, theirSide, partner, busy, update }) {
           </Button>
         )}
         <TheirStatus partner={partner} ok={theyDone} text="received" waiting="hasn't confirmed yet" />
+      </Step>
+    </div>
+  );
+}
+
+// A free item by post: the receiver adds an address and pays, the giver sends it, the receiver confirms.
+function GiftShippingSteps({ swap, mySide, partner, busy, update }) {
+  const receiving = mySide === 'requester';
+  const addr = swap.requester_address;
+  const paid = swap.requester_paid;
+  const tracking = swap.owner_tracking;
+  const got = swap.requester_done;
+  const [editing, setEditing] = useState(false);
+
+  return (
+    <div className="rounded-3xl bg-white p-4 shadow-card">
+      <p className="mb-3 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-ink-400"><Truck size={12} /> Shipping steps</p>
+
+      <Step n={1} done={!!addr && !editing} active={!addr || editing} title={receiving ? 'Your delivery address' : 'Their delivery address'}>
+        {receiving ? (
+          addr && !editing ? (
+            <div className="flex items-start justify-between gap-2 rounded-xl bg-sand-50 px-3 py-2 text-xs text-ink-700">
+              <AddressText a={addr} />
+              {!paid && <button onClick={() => setEditing(true)} className="shrink-0 text-[11px] font-semibold text-ink-500 underline">Edit</button>}
+            </div>
+          ) : (
+            <AddressForm initial={addr} saving={busy === 'address'} onSave={async (a) => { await update('address', { requester_address: a }); setEditing(false); }} />
+          )
+        ) : (
+          <TheirStatus partner={partner} ok={!!addr} text="address added" waiting="no address yet" />
+        )}
+      </Step>
+
+      <Step n={2} done={paid} active={!!addr && !paid} title={`Shipping · ₪${SHIPPING_FEE}`}>
+        {receiving ? (
+          paid ? (
+            <p className="flex items-center gap-1.5 text-xs text-sage-700"><Check size={13} /> You paid ₪{SHIPPING_FEE}</p>
+          ) : (
+            <>
+              <p className="mb-2 text-xs text-ink-500">The item is free; you only pay for the shipping.</p>
+              <Button size="sm" disabled={!addr} loading={busy === 'pay'} onClick={() => update('pay', { requester_paid: true })}>
+                <CreditCard size={14} /> Pay ₪{SHIPPING_FEE}
+              </Button>
+              <p className="mt-1.5 text-[10px] text-accent-600">Test mode: no money is charged yet. A payment service still needs to be connected.</p>
+            </>
+          )
+        ) : (
+          <TheirStatus partner={partner} ok={paid} text="paid the shipping" waiting="hasn't paid yet" />
+        )}
+      </Step>
+
+      <Step n={3} done={!!tracking} active={paid && !tracking} title={receiving ? 'Item on its way' : 'Send the item'}>
+        {receiving ? (
+          <TheirStatus partner={partner} ok={!!tracking} text={`sent · tracking ${tracking}`} waiting="hasn't sent yet" />
+        ) : paid ? (
+          <>
+            <p className="mb-1.5 text-xs text-ink-500">Ship the item to <bdi>@{partner?.username}</bdi>:</p>
+            <div className="mb-2 rounded-xl bg-sand-50 px-3 py-2 text-xs text-ink-700"><AddressText a={addr} copy /></div>
+            {tracking ? (
+              <p className="flex items-center gap-1.5 text-xs text-sage-700"><Package size={13} /> Sent · tracking {tracking}</p>
+            ) : (
+              <TrackingForm saving={busy === 'track'} onSave={(t) => update('track', { owner_tracking: t })} />
+            )}
+          </>
+        ) : (
+          <p className="text-xs text-ink-500">The address appears once they paid the shipping.</p>
+        )}
+      </Step>
+
+      <Step n={4} done={got} active={!!tracking && !got} title="Received">
+        {receiving ? (
+          got ? (
+            <p className="flex items-center gap-1.5 text-xs text-sage-700"><Check size={13} /> You confirmed you received it</p>
+          ) : (
+            <Button size="sm" disabled={!tracking} loading={busy === 'done'} onClick={() => update('done', { requester_done: true })}>
+              <Check size={14} /> I received the item
+            </Button>
+          )
+        ) : (
+          <TheirStatus partner={partner} ok={got} text="received" waiting="hasn't confirmed yet" />
+        )}
       </Step>
     </div>
   );
@@ -497,21 +638,26 @@ function Chat({ messages, me, partner }) {
 function ChatInput({ swapId, onSent }) {
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
+  const [err, setErr] = useState(null);
   const send = async (e) => {
     e?.preventDefault();
     const body = text.trim();
     if (!body || sending) return;
     setSending(true);
     try {
+      setErr(null);
       await sendMessage(swapId, body);
       setText('');
       await onSent();
+    } catch (x) {
+      setErr(/swap_messages|relation|schema cache/i.test(x.message || '') ? 'Chat is not switched on yet: run supabase/RUN_THIS_ONCE.sql in Supabase.' : x.message || 'The message was not sent. Try again.');
     } finally {
       setSending(false);
     }
   };
   return (
     <form onSubmit={send} className="fixed bottom-0 left-0 right-0 z-30 border-t border-ink-100 bg-white/95 pb-safe backdrop-blur-xl">
+      {err && <p className="mx-auto max-w-md px-4 pt-2 text-xs text-accent-700">{err}</p>}
       <div className="mx-auto flex max-w-md items-center gap-2 px-3 py-2.5">
         <input
           id="chat-input"
