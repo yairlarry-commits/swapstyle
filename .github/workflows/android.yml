@@ -1,0 +1,64 @@
+name: Build Android app
+
+on:
+  push:
+    branches: [main]
+    paths: ['android/**', '.github/workflows/android.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Signing key
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+        run: |
+          if [ -z "$SIGNING_KEY" ]; then
+            echo "::error::The SIGNING_KEY secret is missing. Add it in Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          echo "$SIGNING_KEY" | base64 -d > "$RUNNER_TEMP/swapstyle.jks"
+          echo "KEYSTORE_FILE=$RUNNER_TEMP/swapstyle.jks" >> "$GITHUB_ENV"
+
+      - name: Build APK and AAB
+        working-directory: android
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+          KEYSTORE_PASSWORD: swapstyle-release
+          KEY_ALIAS: swapstyle
+        run: gradle --no-daemon assembleRelease bundleRelease
+
+      - name: Collect files
+        run: |
+          mkdir out
+          cp android/app/build/outputs/apk/release/app-release.apk out/SwapStyle.apk
+          cp android/app/build/outputs/bundle/release/app-release.aab out/SwapStyle.aab
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SwapStyle-android
+          path: out/
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-v${{ github.run_number }}
+          name: SwapStyle Android ${{ github.run_number }}
+          body: Download SwapStyle.apk on your phone to install. SwapStyle.aab is for Google Play.
+          files: |
+            out/SwapStyle.apk
+            out/SwapStyle.aab

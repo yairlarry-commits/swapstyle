@@ -1,0 +1,43 @@
+plugins {
+    id 'com.android.application'
+}
+
+def env = System.getenv()
+
+android {
+    namespace 'com.swapstyle.app'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.swapstyle.app'
+        minSdk 24
+        targetSdk 34
+        versionCode((env.VERSION_CODE ?: '1') as Integer)
+        versionName "1.0.${env.VERSION_CODE ?: '1'}"
+    }
+
+    signingConfigs {
+        release {
+            storeFile file(env.KEYSTORE_FILE ?: 'missing.jks')
+            storePassword env.KEYSTORE_PASSWORD
+            keyAlias env.KEY_ALIAS
+            keyPassword env.KEYSTORE_PASSWORD
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core:1.13.1'
+}
