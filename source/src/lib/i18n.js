@@ -105,7 +105,7 @@ const HE = {
   עברית: 'עברית',
 
   // ---- sign in
-  'Swap clothes you no longer wear for something new. Zero cost, zero waste.': 'מחליפים בגדים שכבר לא לובשים בחדשים. בלי עלות, בלי בזבוז.',
+  'Not wearing it anymore? Swap it.': 'כבר לא לובשים? מתחלפים',
   'Create account': 'הרשמה',
   'Sign in': 'כניסה',
   'Sign out': 'יציאה',

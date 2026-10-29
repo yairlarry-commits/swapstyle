@@ -2,7 +2,7 @@
   "id": "./",
   "name": "SwapStyle — Clothes Swapping",
   "short_name": "SwapStyle",
-  "description": "מחליפים בגדים שכבר לא לובשים בחדשים. בלי עלות, בלי בזבוז.",
+  "description": "כבר לא לובשים? מתחלפים",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
