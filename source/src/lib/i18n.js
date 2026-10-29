@@ -476,7 +476,7 @@ const HE = {
   // ---- errors from the app
   'Your account is suspended.': 'החשבון שלכם מושעה.',
   'Only admins can do that.': 'רק מנהלים יכולים לעשות את זה.',
-  'Chat is not set up yet: run supabase/migration_002_chat_and_shipping.sql in Supabase.': 'הצ׳אט עדיין לא מוגדר: צריך להריץ את migration_002 ב־Supabase.',
-  'Reporting is not set up yet: run supabase/migration_003_admin_and_reports.sql in Supabase.': 'הדיווחים עדיין לא מוגדרים: צריך להריץ את migration_003 ב־Supabase.',
-  'Admin tools are not set up yet: run supabase/migration_003_admin_and_reports.sql in Supabase.': 'כלי הניהול עדיין לא מוגדרים: צריך להריץ את migration_003 ב־Supabase.',
+  'Chat is not set up yet: run supabase/migration_002_chat_and_shipping.sql in Supabase.': 'הצ׳אט עדיין לא הופעל: צריך להריץ את RUN_THIS_ONCE.sql ב־Supabase.',
+  'Reporting is not set up yet: run supabase/migration_003_admin_and_reports.sql in Supabase.': 'הדיווחים עדיין לא הופעלו: צריך להריץ את RUN_THIS_ONCE.sql ב־Supabase.',
+  'Admin tools are not set up yet: run supabase/migration_003_admin_and_reports.sql in Supabase.': 'כלי הניהול עדיין לא הופעלו: צריך להריץ את RUN_THIS_ONCE.sql ב־Supabase.',
 };
