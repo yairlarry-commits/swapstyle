@@ -1,4 +1,4 @@
--- SwapStyle: full setup for a NEW, empty Supabase project. Paste all of it into SQL Editor and Run.
+-- SwapStyle: full setup for a NEW Supabase project. Paste all of it into SQL Editor and Run. Safe to run again.
 
 -- ============ Tables and basic rules (schema.sql) ============
 -- SwapStyle database schema (reconstructed from the live app).
@@ -70,22 +70,31 @@ alter table public.profiles enable row level security;
 alter table public.items enable row level security;
 alter table public.swap_requests enable row level security;
 
+drop policy if exists "profiles readable by signed-in users" on public.profiles;
 create policy "profiles readable by signed-in users" on public.profiles for select to authenticated using (true);
+drop policy if exists "insert own profile" on public.profiles;
 create policy "insert own profile" on public.profiles for insert to authenticated with check (id = auth.uid());
+drop policy if exists "update own profile" on public.profiles;
 create policy "update own profile" on public.profiles for update to authenticated using (id = auth.uid());
 
+drop policy if exists "items readable by signed-in users" on public.items;
 create policy "items readable by signed-in users" on public.items for select to authenticated using (true);
+drop policy if exists "insert own items" on public.items;
 create policy "insert own items" on public.items for insert to authenticated with check (owner_id = auth.uid());
+drop policy if exists "update own items" on public.items;
 create policy "update own items" on public.items for update to authenticated using (owner_id = auth.uid());
 
+drop policy if exists "see swaps I'm part of" on public.swap_requests;
 create policy "see swaps I'm part of" on public.swap_requests for select to authenticated using (
   requester_id = auth.uid()
   or exists (select 1 from public.items i where i.id = requested_item_id and i.owner_id = auth.uid())
 );
+drop policy if exists "create swap requests" on public.swap_requests;
 create policy "create swap requests" on public.swap_requests for insert to authenticated with check (
   requester_id = auth.uid()
   and exists (select 1 from public.items i where i.id = offered_item_id and i.owner_id = auth.uid())
 );
+drop policy if exists "owner answers swap requests" on public.swap_requests;
 create policy "owner answers swap requests" on public.swap_requests for update to authenticated using (
   exists (select 1 from public.items i where i.id = requested_item_id and i.owner_id = auth.uid())
 );
