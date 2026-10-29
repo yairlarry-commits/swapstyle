@@ -105,7 +105,7 @@ const HE = {
   עברית: 'עברית',
 
   // ---- sign in
-  'Not wearing it anymore? Swap it.': 'כבר לא לובשים? מתחלפים',
+  'Swap and refresh your style.': 'מחליפים ומתחדשים',
   'Create account': 'הרשמה',
   'Sign in': 'כניסה',
   'Sign out': 'יציאה',

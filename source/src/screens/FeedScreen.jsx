@@ -38,7 +38,7 @@ export function FeedScreen() {
 
   return (
     <div className="min-h-screen bg-sand-50 pb-24">
-      <AppHeader title="SwapStyle" subtitle="Fresh drops to swap into">
+      <AppHeader title="SwapStyle" subtitle="Swap and refresh your style.">
           <div className="flex items-center gap-1.5">
             <Chip fit label="All" active={filters.category === 'all'} onClick={() => setFilters((f) => ({ ...f, category: 'all', kidsAge: 'all' }))} />
             {CATEGORIES.map((c) => (

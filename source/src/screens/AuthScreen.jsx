@@ -53,7 +53,7 @@ export function AuthScreen() {
             <Logo size={44} container={false} />
           </div>
           <h1 className="font-display text-4xl font-bold tracking-tight text-ink-900">SwapStyle</h1>
-          <p className="mt-2 max-w-xs text-sm leading-relaxed text-ink-500">Not wearing it anymore? Swap it.</p>
+          <p className="mt-2 max-w-xs text-sm leading-relaxed text-ink-500">Swap and refresh your style.</p>
         </div>
 
         <div className="mb-6 grid grid-cols-2 gap-1 rounded-xl bg-ink-100 p-1">
