@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowLeft, MapPin, Package, PenLine, Grid2x2, Sparkles, X, Check, LogOut, ShieldAlert, Ban, Repeat2, Gift, Plus } from 'lucide-react';
+import { ArrowLeft, MapPin, Package, PenLine, Grid2x2, Sparkles, X, Check, LogOut, ShieldAlert, Ban, Repeat2, Gift, Plus, KeyRound, Copy } from 'lucide-react';
 import { useRouter, useBackToClose } from '../context/RouterContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
-import { fetchProfile, fetchClosetItems, updateProfile, adminSetBanned } from '../lib/api.js';
+import { fetchProfile, fetchClosetItems, updateProfile, adminSetBanned, adminResetPassword, authUpdatePassword } from '../lib/api.js';
 import { SWAP_PREFERENCES, conditionLabel, swapPrefLabel, isGiveaway } from '../lib/constants.js';
-import { Avatar, Button, ItemVisual, LanguageToggle } from '../components/ui.jsx';
+import { Avatar, Button, ItemVisual, LanguageToggle, Sheet } from '../components/ui.jsx';
 import { AdminBox, ConfirmButton, ReportButton } from '../components/Moderation.jsx';
 
 export function ProfileScreen({ userId, closet: startCloset }) {
@@ -19,6 +19,7 @@ export function ProfileScreen({ userId, closet: startCloset }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ username: '', city: '', swap_preference: 'either' });
   const [saving, setSaving] = useState(false);
+  const [pwOpen, setPwOpen] = useState(false);
   const [closet, setCloset] = useState(startCloset === 'give' ? 'give' : 'swap');
 
   const load = useCallback(async () => {
@@ -125,8 +126,14 @@ export function ProfileScreen({ userId, closet: startCloset }) {
                 </div>
               )}
               {isMe && (
-                <div className="mt-3 flex justify-center">
+                <div className="mt-3 flex justify-center gap-2">
                   <LanguageToggle />
+                  <button
+                    onClick={() => setPwOpen(true)}
+                    className="inline-flex h-8 items-center gap-1.5 rounded-full bg-white px-3 text-xs font-medium text-ink-600 ring-1 ring-ink-200 transition active:scale-95"
+                  >
+                    <KeyRound size={13} /> Change password
+                  </button>
                 </div>
               )}
               {isMe && me?.is_admin && (
@@ -150,6 +157,7 @@ export function ProfileScreen({ userId, closet: startCloset }) {
                           <Ban size={14} /> Suspend <bdi>@{profile.username}</bdi>
                         </ConfirmButton>
                       )}
+                      <AdminPasswordReset userId={profile.id} username={profile.username} />
                     </AdminBox>
                   )}
                   <ReportButton targetType="profile" targetId={profile.id} label={`Report @${profile.username}`} className="self-center" />
@@ -197,6 +205,7 @@ export function ProfileScreen({ userId, closet: startCloset }) {
         )}
       </div>
 
+      <ChangePasswordSheet open={pwOpen} onClose={() => setPwOpen(false)} />
       {editing && <EditProfileSheet form={form} setForm={setForm} onSave={save} onCancel={() => setEditing(false)} saving={saving} />}
     </div>
   );
@@ -274,5 +283,79 @@ function EditProfileSheet({ form, setForm, onSave, onCancel, saving }) {
         </div>
       </div>
     </div>
+  );
+}
+
+function ChangePasswordSheet({ open, onClose }) {
+  const [pw, setPw] = useState('');
+  const [pw2, setPw2] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState(null);
+  const [error, setError] = useState(null);
+  useEffect(() => {
+    if (open) { setPw(''); setPw2(''); setMsg(null); setError(null); }
+  }, [open]);
+  const save = async () => {
+    setError(null);
+    if (pw.length < 6) return setError('Password must be at least 6 characters.');
+    if (pw !== pw2) return setError("The two passwords don't match.");
+    setBusy(true);
+    const { error: err } = await authUpdatePassword(pw);
+    setBusy(false);
+    if (err) setError(err);
+    else setMsg('Your password was changed.');
+  };
+  const field = (value, set, ph) => (
+    <input
+      type="password"
+      value={value}
+      placeholder={ph}
+      onChange={(e) => set(e.target.value)}
+      className="h-11 w-full rounded-xl border border-ink-200 px-3 text-sm focus:border-ink-900 focus:outline-none"
+    />
+  );
+  return (
+    <Sheet open={open} onClose={onClose} title="Change password">
+      <div className="flex flex-col gap-3">
+        {field(pw, setPw, 'New password')}
+        {field(pw2, setPw2, 'Repeat new password')}
+        {error && <p className="rounded-xl bg-accent-50 px-3 py-2 text-sm text-accent-700">{error}</p>}
+        {msg && <p className="rounded-xl bg-sage-50 px-3 py-2 text-sm text-sage-700">{msg}</p>}
+        <Button size="lg" loading={busy} onClick={msg ? onClose : save}>{msg ? 'Done' : 'Save password'}</Button>
+      </div>
+    </Sheet>
+  );
+}
+
+// Admin: give someone who forgot their password a temporary one
+function AdminPasswordReset({ userId, username }) {
+  const [temp, setTemp] = useState(null);
+  const [error, setError] = useState(null);
+  if (temp) {
+    return (
+      <div className="w-full rounded-xl bg-white p-3 text-xs text-ink-700 ring-1 ring-ink-200">
+        <p>Temporary password for <bdi>@{username}</bdi>:</p>
+        <div className="mt-1.5 flex items-center justify-between gap-2">
+          <code className="text-base font-semibold tracking-wider text-ink-900" dir="ltr">{temp}</code>
+          <button onClick={() => navigator.clipboard?.writeText(temp).catch(() => {})} aria-label="Copy" className="grid h-8 w-8 place-items-center rounded-full ring-1 ring-ink-200">
+            <Copy size={13} />
+          </button>
+        </div>
+        <p className="mt-1.5 text-ink-500">Send it to them privately. They sign in with it, then change it under Change password.</p>
+      </div>
+    );
+  }
+  return (
+    <>
+      <ConfirmButton
+        onConfirm={async () => {
+          setError(null);
+          try { setTemp(await adminResetPassword(userId)); } catch (e) { setError(e.message); }
+        }}
+      >
+        <KeyRound size={14} /> Reset password
+      </ConfirmButton>
+      {error && <p className="w-full text-xs text-accent-700">{error}</p>}
+    </>
   );
 }

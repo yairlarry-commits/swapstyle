@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { authGetSession, authOnChange, authSignIn, authSignUp, authSignOut, fetchProfile } from '../lib/api.js';
+import { authGetSession, authOnChange, authSignIn, authSignUp, authSignOut, authUpdatePassword, fetchProfile } from '../lib/api.js';
 import { AVATAR_COLORS } from '../lib/constants.js';
 
 const AuthContext = createContext(undefined);
@@ -9,6 +9,8 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  // opened from a "reset your password" email: ask for a new password first
+  const [recovering, setRecovering] = useState(() => /type=recovery/.test(window.location.hash));
 
   const loadProfile = useCallback(async (id) => {
     try {
@@ -49,8 +51,9 @@ export function AuthProvider({ children }) {
         setLoading(false);
       });
 
-    const unsubscribe = authOnChange((s) => {
+    const unsubscribe = authOnChange((s, event) => {
       if (!alive) return;
+      if (event === 'PASSWORD_RECOVERY') setRecovering(true);
       settled = true;
       setSession(s);
       setUser(s?.user ?? null);
@@ -76,13 +79,22 @@ export function AuthProvider({ children }) {
     return authSignUp(email, password, username, city, color);
   }, []);
 
+  const setNewPassword = useCallback(async (password) => {
+    const res = await authUpdatePassword(password);
+    if (!res.error) {
+      setRecovering(false);
+      try { window.history.replaceState(window.history.state, '', window.location.pathname); } catch {}
+    }
+    return res;
+  }, []);
+
   const signOut = useCallback(async () => {
     await authSignOut();
     setProfile(null);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ session, user, profile, loading, signIn, signUp, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ session, user, profile, loading, signIn, signUp, signOut, refreshProfile, recovering, setNewPassword }}>
       {children}
     </AuthContext.Provider>
   );

@@ -4,9 +4,11 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { Button, LanguageToggle, Logo } from '../components/ui.jsx';
 import { DEMO_MODE } from '../lib/backend.js';
 import { demoStore } from '../lib/demoStore.js';
+import { authResetPassword } from '../lib/api.js';
 
 export function AuthScreen() {
   const { signIn, signUp } = useAuth();
+  const [forgot, setForgot] = useState(false);
   // Returning visitors land on Sign in instead of Create account
   const [mode, setMode] = useState(() => (DEMO_MODE && demoStore.hasAccounts() ? 'signin' : 'signup'));
   const [guestBusy, setGuestBusy] = useState(false);
@@ -37,6 +39,10 @@ export function AuthScreen() {
       const { error: err, needsConfirm } = await signUp(email.trim(), password, username.trim(), city.trim());
       if (err) setError(friendlyAuthError(err));
       else if (needsConfirm) { setNotice('Almost there! Check your email and tap the confirmation link, then sign in.'); setMode('signin'); }
+    } else if (forgot) {
+      const { error: err } = await authResetPassword(email.trim());
+      if (err) setError(friendlyAuthError(err));
+      else setNotice("If this email has an account, we've sent a link to set a new password. Didn't get it within a few minutes? Ask the SwapStyle admin for a temporary password.");
     } else {
       const { error: err } = await signIn(email.trim(), password);
       if (err) setError(friendlyAuthError(err));
@@ -60,7 +66,7 @@ export function AuthScreen() {
           {['signup', 'signin'].map((m) => (
             <button
               key={m}
-              onClick={() => { setMode(m); setError(null); }}
+              onClick={() => { setMode(m); setError(null); setForgot(false); }}
               className={`h-10 rounded-lg text-sm font-medium transition-all ${mode === m ? 'bg-white text-ink-900 shadow-sm' : 'text-ink-500'}`}
             >
               {m === 'signup' ? 'Create account' : 'Sign in'}
@@ -76,11 +82,20 @@ export function AuthScreen() {
               <AuthField icon={<MapPin size={18} />} placeholder="City (optional)" value={city} onChange={setCity} />
             </>
           )}
-          <AuthField icon={<Lock size={18} />} type="password" placeholder="Password" value={password} onChange={setPassword} required />
+          {!forgot && <AuthField icon={<Lock size={18} />} type="password" placeholder="Password" value={password} onChange={setPassword} required />}
+          {mode === 'signin' && (
+            <button
+              type="button"
+              onClick={() => { setForgot((v) => !v); setError(null); setNotice(null); }}
+              className="self-end text-xs font-medium text-ink-500 underline-offset-2 hover:underline"
+            >
+              {forgot ? 'Back to sign in' : 'Forgot password?'}
+            </button>
+          )}
           {notice && <div className="rounded-xl bg-sage-50 px-4 py-3 text-sm text-sage-700">{notice}</div>}
           {error && <div className="rounded-xl bg-accent-50 px-4 py-3 text-sm text-accent-700">{error}</div>}
           <Button type="submit" size="lg" loading={busy} className="mt-2 w-full">
-            {mode === 'signup' ? 'Start swapping' : 'Sign in'}
+            {mode === 'signup' ? 'Start swapping' : forgot ? 'Send reset link' : 'Sign in'}
             <ArrowRight size={18} className="flip-rtl" />
           </Button>
         </form>
@@ -105,6 +120,45 @@ export function AuthScreen() {
         )}
 
         <p className="mt-auto pt-8 text-center text-xs text-ink-400">By continuing you agree to swap responsibly and kindly.</p>
+      </div>
+    </div>
+  );
+}
+
+// Opened from a "reset your password" email
+export function NewPasswordScreen() {
+  const { setNewPassword, signOut } = useAuth();
+  const [pw, setPw] = useState('');
+  const [pw2, setPw2] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const save = async (e) => {
+    e.preventDefault();
+    setError(null);
+    if (pw.length < 6) return setError('Password must be at least 6 characters.');
+    if (pw !== pw2) return setError("The two passwords don't match.");
+    setBusy(true);
+    const { error: err } = await setNewPassword(pw);
+    setBusy(false);
+    if (err) setError(err);
+  };
+  return (
+    <div className="min-h-screen bg-sand-50">
+      <div className="mx-auto flex min-h-screen max-w-md flex-col px-6 pb-10 pt-16">
+        <div className="mb-8 flex flex-col items-center text-center">
+          <div className="mb-5 grid h-16 w-16 place-items-center rounded-2xl bg-white shadow-float">
+            <Logo size={44} container={false} />
+          </div>
+          <h1 className="font-display text-2xl font-bold text-ink-900">Set a new password</h1>
+          <p className="mt-2 text-sm text-ink-500">Choose a password you'll remember.</p>
+        </div>
+        <form onSubmit={save} className="flex flex-col gap-3">
+          <AuthField icon={<Lock size={18} />} type="password" placeholder="New password" value={pw} onChange={setPw} required />
+          <AuthField icon={<Lock size={18} />} type="password" placeholder="Repeat new password" value={pw2} onChange={setPw2} required />
+          {error && <div className="rounded-xl bg-accent-50 px-4 py-3 text-sm text-accent-700">{error}</div>}
+          <Button type="submit" size="lg" loading={busy} className="mt-2 w-full">Save password</Button>
+          <button type="button" onClick={signOut} className="mt-1 text-xs text-ink-500 underline-offset-2 hover:underline">Cancel</button>
+        </form>
       </div>
     </div>
   );

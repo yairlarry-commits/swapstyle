@@ -13,7 +13,7 @@ export async function authGetSession() {
 
 export function authOnChange(cb) {
   if (DEMO_MODE) return demoStore.onAuthChange(cb);
-  const { data } = supabase.auth.onAuthStateChange((_event, session) => cb(session));
+  const { data } = supabase.auth.onAuthStateChange((event, session) => cb(session, event));
   return () => data.subscription.unsubscribe();
 }
 
@@ -38,6 +38,33 @@ export async function authSignUp(email, password, username, city, avatarColor) {
     if (pErr && pErr.code !== '23505') return { error: pErr.message };
   }
   return { error: null, needsConfirm: !data.session };
+}
+
+// "Forgot password": emails a link back to the app where a new password can be set
+export async function authResetPassword(email) {
+  if (DEMO_MODE) return { error: null };
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + window.location.pathname });
+  return { error: error?.message ?? null };
+}
+
+export async function authUpdatePassword(password) {
+  if (DEMO_MODE) return { error: null };
+  const { error } = await supabase.auth.updateUser({ password });
+  return { error: error?.message ?? null };
+}
+
+// Admin: give a user a temporary password (they sign in with it and can then change it)
+export async function adminResetPassword(userId) {
+  const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
+  const rnd = crypto.getRandomValues(new Uint32Array(10));
+  const temp = Array.from(rnd, (n) => chars[n % chars.length]).join('');
+  if (DEMO_MODE) return temp;
+  const { error } = await supabase.rpc('admin_set_password', { target: userId, new_password: temp });
+  if (error) {
+    if (/admin_set_password|function/i.test(error.message || '')) throw new Error('Password reset is not set up yet: run supabase/migration_005_password_help.sql in Supabase.');
+    throw error;
+  }
+  return temp;
 }
 
 export async function authSignOut() {

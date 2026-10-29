@@ -4,7 +4,7 @@ import { RefreshCw } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import { RouterProvider, useRouter } from './context/RouterContext.jsx';
 import { BottomNav, Logo } from './components/ui.jsx';
-import { AuthScreen } from './screens/AuthScreen.jsx';
+import { AuthScreen, NewPasswordScreen } from './screens/AuthScreen.jsx';
 import { FeedScreen } from './screens/FeedScreen.jsx';
 import { ItemScreen } from './screens/ItemScreen.jsx';
 import { ProfileScreen } from './screens/ProfileScreen.jsx';
@@ -49,7 +49,7 @@ class ErrorBoundary extends Component {
 }
 
 function Shell() {
-  const { loading, user } = useAuth();
+  const { loading, user, recovering } = useAuth();
   const { route, reset } = useRouter();
 
   // every sign-in starts on the feed
@@ -69,6 +69,7 @@ function Shell() {
   }
 
   if (!user) return <AuthScreen />;
+  if (recovering) return <NewPasswordScreen />;
 
   const showNav = ['feed', 'offers', 'upload', 'messages'].includes(route.name) || (route.name === 'profile' && !route.userId);
 
