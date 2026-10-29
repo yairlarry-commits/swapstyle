@@ -28,11 +28,11 @@ export async function authSignUp(email, password, username, city, avatarColor) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { username, avatar_color: avatarColor } },
+    options: { data: { username, avatar_color: avatarColor, city: city || '' }, emailRedirectTo: window.location.origin + window.location.pathname },
   });
   if (error) return { error: error.message };
   const id = data.user?.id;
-  if (id) {
+  if (id && data.session) {
     const { error: pErr } = await supabase.from('profiles').insert({ id, username, avatar_color: avatarColor, city: city || null });
     // 23505 = profile already exists (e.g. created by a trigger)
     if (pErr && pErr.code !== '23505') return { error: pErr.message };
