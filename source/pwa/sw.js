@@ -1,6 +1,6 @@
 // SwapStyle service worker: makes the app installable and opens instantly, even offline.
 // Paths are relative to where the app lives (works at a domain root or in a sub-folder like /swapstyle/).
-const CACHE = 'swapstyle-v11';
+const CACHE = 'swapstyle-v12';
 const BASE = self.registration.scope;
 const SHELL = ['', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'].map((p) => new URL(p, BASE).href);
 
@@ -22,7 +22,8 @@ self.addEventListener('fetch', (e) => {
   // the app page: network first (to get updates), cached copy when offline
   if (req.mode === 'navigate') {
     e.respondWith(
-      fetch(req)
+      // always ask the server (GitHub Pages lets browsers keep pages for 10 minutes otherwise)
+      fetch(req, { cache: 'no-cache' })
         .then((res) => {
           const copy = res.clone();
           caches.open(CACHE).then((c) => c.put(page, copy));
