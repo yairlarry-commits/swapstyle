@@ -5,6 +5,7 @@ import { Button, LanguageToggle, Logo } from '../components/ui.jsx';
 import { DEMO_MODE } from '../lib/backend.js';
 import { demoStore } from '../lib/demoStore.js';
 import { authResetPassword } from '../lib/api.js';
+import { CityInput } from '../components/CityInput.jsx';
 
 export function AuthScreen() {
   const { signIn, signUp } = useAuth();
@@ -79,7 +80,10 @@ export function AuthScreen() {
           {mode === 'signup' && (
             <>
               <AuthField icon={<User size={18} />} placeholder="Username" value={username} onChange={setUsername} required />
-              <AuthField icon={<MapPin size={18} />} placeholder="City (optional)" value={city} onChange={setCity} />
+              <div className="flex h-12 items-center gap-3 rounded-xl border border-ink-200 bg-white px-4 transition focus-within:border-ink-900">
+                <span className="text-ink-400"><MapPin size={18} /></span>
+                <CityInput value={city} onChange={setCity} placeholder="City (to see clothes near you)" className="h-full w-full bg-transparent text-sm text-ink-900 placeholder:text-ink-400 focus:outline-none" />
+              </div>
             </>
           )}
           {!forgot && <AuthField icon={<Lock size={18} />} type="password" placeholder="Password" value={password} onChange={setPassword} required />}

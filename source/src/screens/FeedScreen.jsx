@@ -1,18 +1,21 @@
 import { useCallback, useEffect, useState } from 'react';
-import { SlidersHorizontal, X, Home, Gift } from 'lucide-react';
+import { SlidersHorizontal, X, Home, Gift, MapPin } from 'lucide-react';
 import { useRouter } from '../context/RouterContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { fetchFeed } from '../lib/api.js';
 import { CATEGORIES, SIZES, KIDS_AGES, ITEM_TYPES, conditionLabel, timeAgo, isGiveaway } from '../lib/constants.js';
 import { AppHeader, Avatar, Chip, ItemVisual } from '../components/ui.jsx';
+import { sameCity } from '../lib/cities.js';
 
 export function FeedScreen() {
   const { navigate } = useRouter();
-  const suspended = useAuth().profile?.banned;
+  const me = useAuth().profile;
+  const suspended = me?.banned;
+  const myCity = me?.city?.trim() || '';
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filters, setFilters] = useState({ category: 'all', size: 'all', itemType: 'all', kidsAge: 'all', listing: 'all' });
+  const [filters, setFilters] = useState({ category: 'all', size: 'all', itemType: 'all', kidsAge: 'all', listing: 'all', nearOnly: false });
   const [showMore, setShowMore] = useState(false);
 
   const load = useCallback(async () => {
@@ -34,7 +37,11 @@ export function FeedScreen() {
   const isKids = filters.category === 'kids';
   const sizeOptions = isKids ? KIDS_AGES.map((a) => a.id) : SIZES;
   const isAcc = filters.category === 'accessories';
-  const extraActive = filters.size !== 'all' || filters.itemType !== 'all' || filters.listing !== 'all';
+  const extraActive = filters.size !== 'all' || filters.itemType !== 'all' || filters.listing !== 'all' || filters.nearOnly;
+  // clothes from your own city come first: swapping in person is free and easy
+  const near = myCity ? items.filter((it) => sameCity(it.owner?.city, myCity)) : [];
+  const far = myCity ? items.filter((it) => !sameCity(it.owner?.city, myCity)) : items;
+  const card = (it) => <FeedCard key={it.id} item={it} near={near.includes(it)} onOpen={() => navigate({ name: 'item', itemId: it.id })} />;
 
   return (
     <div className="min-h-screen bg-sand-50 pb-24">
@@ -57,6 +64,12 @@ export function FeedScreen() {
 
           {showMore && (
             <div className="mt-3 flex flex-col gap-3 rounded-2xl bg-white p-3 shadow-card animate-scale-in">
+              {myCity && (
+                <FilterRow label="Where">
+                  <Chip label="Everywhere" small active={!filters.nearOnly} onClick={() => setFilters((f) => ({ ...f, nearOnly: false }))} />
+                  <Chip label="My city only" small active={filters.nearOnly} onClick={() => setFilters((f) => ({ ...f, nearOnly: true }))} />
+                </FilterRow>
+              )}
               <FilterRow label="Closet">
                 <Chip label="Any" small active={filters.listing === 'all'} onClick={() => setFilters((f) => ({ ...f, listing: 'all' }))} />
                 <Chip label="To swap" small active={filters.listing === 'swap'} onClick={() => setFilters((f) => ({ ...f, listing: 'swap' }))} />
@@ -81,7 +94,7 @@ export function FeedScreen() {
                 ))}
               </FilterRow>}
               {extraActive && (
-                <button onClick={() => setFilters((f) => ({ ...f, size: 'all', itemType: 'all', listing: 'all' }))} className="flex items-center justify-center gap-1 text-xs font-medium text-ink-500">
+                <button onClick={() => setFilters((f) => ({ ...f, size: 'all', itemType: 'all', listing: 'all', nearOnly: false }))} className="flex items-center justify-center gap-1 text-xs font-medium text-ink-500">
                   <X size={13} /> Clear filters
                 </button>
               )}
@@ -100,21 +113,46 @@ export function FeedScreen() {
           <div className="flex flex-col gap-5">
             {[0, 1, 2].map((i) => <FeedCardSkeleton key={i} />)}
           </div>
-        ) : items.length === 0 ? (
-          <FeedEmpty />
         ) : (
-          <div className="flex flex-col gap-5">
-            {items.map((it) => (
-              <FeedCard key={it.id} item={it} onOpen={() => navigate({ name: 'item', itemId: it.id })} />
-            ))}
-          </div>
+          <>
+            {!myCity ? (
+              <button
+                onClick={() => navigate({ name: 'profile' })}
+                className="mb-4 flex w-full items-center gap-2 rounded-2xl bg-white px-4 py-3 text-start text-sm text-ink-700 shadow-card"
+              >
+                <MapPin size={17} className="shrink-0 text-gold-600" />
+                <span>Add your city to see clothes near you first. Swapping in person is free.</span>
+              </button>
+            ) : (
+              <p className="mb-3 flex items-center gap-1.5 text-xs font-semibold text-ink-500">
+                <MapPin size={13} className="text-gold-600" /> Near you · <bdi>{myCity}</bdi>
+                <span className="font-normal text-ink-400">({near.length})</span>
+              </p>
+            )}
+            {myCity && near.length === 0 && (
+              <p className="mb-4 rounded-2xl bg-white px-4 py-3 text-sm text-ink-500 shadow-card">
+                {filters.nearOnly ? 'Nothing in your city yet. Invite friends nearby to join!' : 'Nothing in your city yet. Here is what people elsewhere are swapping.'}
+              </p>
+            )}
+            {items.length === 0 && !myCity ? (
+              <FeedEmpty />
+            ) : (
+              <div className="flex flex-col gap-5">
+                {near.map(card)}
+                {!filters.nearOnly && myCity && near.length > 0 && far.length > 0 && (
+                  <p className="mt-2 text-xs font-semibold text-ink-500">From other places</p>
+                )}
+                {!filters.nearOnly && far.map(card)}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
   );
 }
 
-function FeedCard({ item, onOpen }) {
+function FeedCard({ item, near, onOpen }) {
   const { navigate } = useRouter();
   const owner = item.owner;
   const isBundle = item.item_type === 'bundle';
@@ -152,7 +190,7 @@ function FeedCard({ item, onOpen }) {
             <Avatar name={owner.username} color={owner.avatar_color} size="sm" />
             <div className="flex flex-col text-start leading-tight">
               <span className="text-[11px] font-semibold text-ink-900"><bdi>@{owner.username}</bdi></span>
-              <span className="text-[10px] text-ink-400">{owner.city || 'No location'} · {timeAgo(item.created_at)}</span>
+              <span className={`text-[10px] ${near ? 'font-semibold text-gold-600' : 'text-ink-400'}`}>{owner.city || 'No location'} · {timeAgo(item.created_at)}</span>
             </div>
           </button>
         )}

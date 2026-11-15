@@ -6,6 +6,7 @@ import { fetchProfile, fetchClosetItems, updateProfile, adminSetBanned, adminRes
 import { SWAP_PREFERENCES, conditionLabel, swapPrefLabel, isGiveaway } from '../lib/constants.js';
 import { Avatar, Button, ItemVisual, LanguageToggle, Sheet } from '../components/ui.jsx';
 import { AdminBox, ConfirmButton, ReportButton } from '../components/Moderation.jsx';
+import { CityInput } from '../components/CityInput.jsx';
 
 export function ProfileScreen({ userId, closet: startCloset }) {
   const { navigate, back } = useRouter();
@@ -262,7 +263,7 @@ function EditProfileSheet({ form, setForm, onSave, onCancel, saving }) {
           </label>
           <label className="flex flex-col gap-1">
             <span className="text-xs font-medium text-ink-500">City</span>
-            <input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="e.g. Tel Aviv" className="h-11 rounded-xl border border-ink-200 px-3 text-sm focus:border-ink-900 focus:outline-none" />
+            <CityInput value={form.city} onChange={(v) => setForm({ ...form, city: v })} placeholder="e.g. Tel Aviv" className="h-11 rounded-xl border border-ink-200 px-3 text-sm focus:border-ink-900 focus:outline-none" />
           </label>
           <div className="flex flex-col gap-1.5">
             <span className="text-xs font-medium text-ink-500">Swap preference</span>
