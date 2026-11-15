@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { SlidersHorizontal, X, Home, Gift, MapPin } from 'lucide-react';
+import { SlidersHorizontal, X, Home, Gift, MapPin, User } from 'lucide-react';
 import { useRouter } from '../context/RouterContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { fetchFeed } from '../lib/api.js';
@@ -167,8 +167,11 @@ function FeedCard({ item, near, onOpen }) {
         {isGiveaway(item) && (
           <span className="absolute bottom-3 left-3 inline-flex items-center gap-1 rounded-full bg-sage-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm"><Gift size={12} /> Giveaway</span>
         )}
-        {item.back_image_url && !isBundle && (
-          <span className="absolute right-3 top-3 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-semibold text-ink-900 shadow-sm">2 photos</span>
+        {(item.back_image_url || item.worn_image_url) && !isBundle && (
+          <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-semibold text-ink-900 shadow-sm">
+            {item.back_image_url && item.worn_image_url ? '3 photos' : '2 photos'}
+            {item.worn_image_url && <User size={11} />}
+          </span>
         )}
         {isBundle && (
           <span className="absolute right-3 top-3 rounded-full bg-sand-500 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm">Bundle · {item.bundle_count}</span>

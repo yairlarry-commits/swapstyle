@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, MapPin, Package, Repeat2, Check, MessageCircle, Clock, Truck, Handshake, EyeOff, Eye, Ban, Plus, Gift } from 'lucide-react';
-import { useRouter } from '../context/RouterContext.jsx';
+import { ArrowLeft, MapPin, Package, Repeat2, Check, MessageCircle, Clock, Truck, Handshake, EyeOff, Eye, Ban, Plus, Gift, User, X } from 'lucide-react';
+import { useRouter, useBackToClose } from '../context/RouterContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { fetchItem, fetchAvailableItems, createSwapRequest, sendMessage, adminSetItemStatus, adminSetBanned } from '../lib/api.js';
 import { conditionLabel, garmentLabel, swapPrefLabel, timeAgo, SWAP_METHODS, SHIPPING_FEE, methodsAllowed, isGiveaway } from '../lib/constants.js';
@@ -16,6 +16,7 @@ export function ItemScreen({ itemId }) {
   const [error, setError] = useState(null);
   const [swapOpen, setSwapOpen] = useState(() => takeReopenSwap(itemId));
   const [showBack, setShowBack] = useState(false);
+  const [wornOpen, setWornOpen] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -58,9 +59,18 @@ export function ItemScreen({ itemId }) {
   return (
     <div className="min-h-screen bg-white pb-32">
       <BackBar onBack={back} />
+      {wornOpen && <WornViewer src={item.worn_image_url} onClose={() => setWornOpen(false)} />}
       <div className="mx-auto max-w-md">
         <div className="relative aspect-[4/5] w-full">
           <ItemVisual garment={item.garment_type} color={item.color} imageUrl={showBack && item.back_image_url ? item.back_image_url : item.image_url} className="h-full w-full" showSilhouette />
+          {item.worn_image_url && (
+            <button
+              onClick={() => setWornOpen(true)}
+              className="absolute bottom-4 end-4 inline-flex items-center gap-1.5 rounded-full bg-ink-900/85 px-3 py-1.5 text-xs font-semibold text-white shadow-sm backdrop-blur transition active:scale-95"
+            >
+              <User size={13} /> On the body
+            </button>
+          )}
           {item.back_image_url && (
             <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-1 rounded-full bg-white/90 p-1 shadow-sm backdrop-blur">
               {[['front', 'Front side'], ['back', 'Back side']].map(([id, label]) => (
@@ -338,5 +348,23 @@ function SwapRequestSheet({ open, onClose, target }) {
         </div>
       )}
     </Sheet>
+  );
+}
+
+// The "on the body" photo, full screen and unframed
+function WornViewer({ src, onClose }) {
+  useBackToClose(true, onClose);
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col bg-ink-950" onClick={onClose}>
+      <div className="flex items-center justify-between px-4 pb-2 pt-safe">
+        <p className="pt-3 text-sm font-semibold text-white">On the body</p>
+        <button onClick={onClose} aria-label="Close" className="mt-3 grid h-10 w-10 place-items-center rounded-full bg-white/10 text-white">
+          <X size={20} />
+        </button>
+      </div>
+      <div className="flex min-h-0 flex-1 items-center justify-center p-3">
+        <img src={src} alt="worn" className="max-h-full max-w-full rounded-2xl object-contain" onClick={(e) => e.stopPropagation()} />
+      </div>
+    </div>
   );
 }

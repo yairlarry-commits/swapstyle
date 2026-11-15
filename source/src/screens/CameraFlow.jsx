@@ -336,7 +336,7 @@ function BackCloses({ onClose }) {
 // A tappable area that IS the file field (a <label> around an invisible input).
 // This opens the phone's camera / photo library on every browser, including iPhone,
 // where opening a hidden file field from code is often blocked.
-function PhotoPicker({ onFile, camera = false, label, className, children }) {
+export function PhotoPicker({ onFile, camera = false, label, className, children }) {
   return (
     <label className={`relative cursor-pointer ${className}`} aria-label={label}>
       <input

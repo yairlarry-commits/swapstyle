@@ -134,8 +134,8 @@ export async function fetchAvailableItems(ownerId) {
 export async function createItem(row) {
   if (DEMO_MODE) return demoStore.createItem(row);
   let { data, error } = await supabase.from('items').insert(row).select('*').single();
-  if (error && /back_image_url/i.test(error.message || '')) {
-    throw new Error('Back photos are not set up yet: run supabase/migration_006_back_photo.sql in Supabase.');
+  if (error && /back_image_url|worn_image_url/i.test(error.message || '')) {
+    throw new Error('Extra photos are not set up yet: run supabase/migration_006_back_photo.sql in Supabase.');
   }
   if (error && /listing/i.test(error.message || '')) {
     if (row.listing === 'give') throw new Error('The giveaway closet is not set up yet: run supabase/RUN_THIS_ONCE.sql in Supabase.');

@@ -373,7 +373,9 @@ end $$;
 revoke all on function public.admin_set_password(uuid, text) from public, anon;
 grant execute on function public.admin_set_password(uuid, text) to authenticated;
 
--- ============ Back photo (migration_006_back_photo.sql) ============
--- SwapStyle: a second photo of the back of an item (optional).
+-- ============ Extra photos (migration_006_back_photo.sql) ============
+-- SwapStyle: optional extra photos of an item: the back, and the item being worn.
 -- Run ONCE in Supabase → SQL Editor. Safe to run again.
 alter table public.items add column if not exists back_image_url text;
+-- and an optional photo of the item being worn (shown only when someone asks to see it)
+alter table public.items add column if not exists worn_image_url text;

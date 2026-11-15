@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { X, WandSparkles, RefreshCw, Camera, Package, Check, Shirt, Grid2x2 } from 'lucide-react';
+import { X, WandSparkles, RefreshCw, Camera, Package, Check, Shirt, Grid2x2, User } from 'lucide-react';
 import { useRouter } from '../context/RouterContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { createItem } from '../lib/api.js';
 import { reopenSwapFor } from '../lib/swapIntent.js';
 import { CATEGORIES, SIZES, ONE_SIZE, KIDS_AGES, ITEM_TYPES, CONDITIONS, GARMENTS, GARMENT_STYLES, LISTINGS } from '../lib/constants.js';
 import { Button, Corner, ItemVisual } from '../components/ui.jsx';
-import { CameraFlow } from './CameraFlow.jsx';
+import { CameraFlow, PhotoPicker } from './CameraFlow.jsx';
+import { shrinkPhoto } from '../lib/imageClean.js';
 
 const MAX_BUNDLE = 100;
 const clampBundle = (v) => Math.max(2, Math.min(MAX_BUNDLE, Math.round(Number(v)) || 2));
@@ -17,6 +18,8 @@ export function UploadScreen({ returnToSwap = null, listing: startListing = 'swa
   const [photo, setPhoto] = useState(null);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [photoBack, setPhotoBack] = useState(null);
+  const [photoWorn, setPhotoWorn] = useState(null);
+  const [wornBusy, setWornBusy] = useState(false);
   const [cameraFor, setCameraFor] = useState('front'); // which photo the camera is taking
   const [form, setForm] = useState({
     title: '',
@@ -66,6 +69,7 @@ export function UploadScreen({ returnToSwap = null, listing: startListing = 'swa
         color: form.color.trim() || null,
         image_url: photo,
         ...(photoBack ? { back_image_url: photoBack } : {}),
+        ...(photoWorn ? { worn_image_url: photoWorn } : {}),
         listing: form.listing,
       });
       if (returnToSwap) {
@@ -146,6 +150,32 @@ export function UploadScreen({ returnToSwap = null, listing: startListing = 'swa
             </button>
             {photoBack && (
               <button onClick={() => setPhotoBack(null)} aria-label="Remove back photo" className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-ink-400 ring-1 ring-ink-200">
+                <X size={14} />
+              </button>
+            )}
+          </div>
+        )}
+
+        {photo && (
+          <div className="mt-2 flex items-center gap-3 rounded-2xl bg-white p-2.5 shadow-card">
+            <PhotoPicker
+              label="Add a photo of it being worn"
+              className="flex min-w-0 flex-1 items-center gap-3 text-start"
+              onFile={async (f) => {
+                setWornBusy(true);
+                try { setPhotoWorn(await shrinkPhoto(f)); } catch (e) { setError(e.message); } finally { setWornBusy(false); }
+              }}
+            >
+              <span className="relative grid aspect-[4/5] w-16 shrink-0 place-items-center overflow-hidden rounded-xl bg-sand-50 ring-1 ring-ink-200">
+                {photoWorn ? <img src={photoWorn} alt="worn" className="absolute inset-0 h-full w-full object-cover" /> : <User size={18} className={wornBusy ? 'animate-pulse text-gold-600' : 'text-ink-400'} />}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold text-ink-900">{photoWorn ? 'Worn photo added' : 'Add a photo of it being worn'}</span>
+                <span className="block text-xs text-ink-500">{photoWorn ? 'Tap it to choose another.' : 'Optional. A regular photo of you wearing it, shown only when someone asks to see it.'}</span>
+              </span>
+            </PhotoPicker>
+            {photoWorn && (
+              <button onClick={() => setPhotoWorn(null)} aria-label="Remove worn photo" className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-ink-400 ring-1 ring-ink-200">
                 <X size={14} />
               </button>
             )}
