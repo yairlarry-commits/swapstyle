@@ -372,3 +372,8 @@ end $$;
 
 revoke all on function public.admin_set_password(uuid, text) from public, anon;
 grant execute on function public.admin_set_password(uuid, text) to authenticated;
+
+-- ============ Back photo (migration_006_back_photo.sql) ============
+-- SwapStyle: a second photo of the back of an item (optional).
+-- Run ONCE in Supabase → SQL Editor. Safe to run again.
+alter table public.items add column if not exists back_image_url text;

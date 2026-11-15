@@ -15,6 +15,7 @@ export function ItemScreen({ itemId }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [swapOpen, setSwapOpen] = useState(() => takeReopenSwap(itemId));
+  const [showBack, setShowBack] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -59,7 +60,20 @@ export function ItemScreen({ itemId }) {
       <BackBar onBack={back} />
       <div className="mx-auto max-w-md">
         <div className="relative aspect-[4/5] w-full">
-          <ItemVisual garment={item.garment_type} color={item.color} imageUrl={item.image_url} className="h-full w-full" showSilhouette />
+          <ItemVisual garment={item.garment_type} color={item.color} imageUrl={showBack && item.back_image_url ? item.back_image_url : item.image_url} className="h-full w-full" showSilhouette />
+          {item.back_image_url && (
+            <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-1 rounded-full bg-white/90 p-1 shadow-sm backdrop-blur">
+              {[['front', 'Front side'], ['back', 'Back side']].map(([id, label]) => (
+                <button
+                  key={id}
+                  onClick={() => setShowBack(id === 'back')}
+                  className={`rounded-full px-3.5 py-1 text-xs font-semibold transition ${(id === 'back') === showBack ? 'bg-ink-900 text-white' : 'text-ink-600'}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="absolute left-4 top-4 flex gap-2">
             <span className="rounded-full bg-white/95 px-3 py-1 text-xs font-semibold text-ink-900 shadow-sm">{item.size}</span>
             <span className="rounded-full bg-ink-900/85 px-3 py-1 text-xs font-semibold text-white">{conditionLabel(item.condition)}</span>

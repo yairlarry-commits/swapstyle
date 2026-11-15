@@ -16,6 +16,8 @@ export function UploadScreen({ returnToSwap = null, listing: startListing = 'swa
   const { user } = useAuth();
   const [photo, setPhoto] = useState(null);
   const [cameraOpen, setCameraOpen] = useState(false);
+  const [photoBack, setPhotoBack] = useState(null);
+  const [cameraFor, setCameraFor] = useState('front'); // which photo the camera is taking
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -63,6 +65,7 @@ export function UploadScreen({ returnToSwap = null, listing: startListing = 'swa
         garment_type: garmentType,
         color: form.color.trim() || null,
         image_url: photo,
+        ...(photoBack ? { back_image_url: photoBack } : {}),
         listing: form.listing,
       });
       if (returnToSwap) {
@@ -94,7 +97,7 @@ export function UploadScreen({ returnToSwap = null, listing: startListing = 'swa
       )}
 
       <div className="mx-auto max-w-md px-5 py-5">
-        <button onClick={() => setCameraOpen(true)} className="group relative aspect-[4/5] w-full overflow-hidden rounded-3xl bg-white shadow-card transition active:scale-[0.99]">
+        <button onClick={() => { setCameraFor('front'); setCameraOpen(true); }} className="group relative aspect-[4/5] w-full overflow-hidden rounded-3xl bg-white shadow-card transition active:scale-[0.99]">
           <div className="absolute inset-0" style={{ background: `linear-gradient(160deg, ${style.bg} 0%, #faf8f4 100%)` }} />
           {photo ? (
             <>
@@ -129,6 +132,25 @@ export function UploadScreen({ returnToSwap = null, listing: startListing = 'swa
             </>
           )}
         </button>
+
+        {photo && (
+          <div className="mt-3 flex items-center gap-3 rounded-2xl bg-white p-2.5 shadow-card">
+            <button onClick={() => { setCameraFor('back'); setCameraOpen(true); }} className="flex min-w-0 flex-1 items-center gap-3 text-start">
+              <span className="relative grid aspect-[4/5] w-16 shrink-0 place-items-center overflow-hidden rounded-xl bg-sand-50 ring-1 ring-ink-200">
+                {photoBack ? <img src={photoBack} alt="back" className="absolute inset-0 h-full w-full object-cover" /> : <Camera size={18} className="text-ink-400" />}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold text-ink-900">{photoBack ? 'Back photo added' : 'Add a photo of the back'}</span>
+                <span className="block text-xs text-ink-500">{photoBack ? 'Tap it to take it again.' : 'Optional. Helps people see the whole item.'}</span>
+              </span>
+            </button>
+            {photoBack && (
+              <button onClick={() => setPhotoBack(null)} aria-label="Remove back photo" className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-ink-400 ring-1 ring-ink-200">
+                <X size={14} />
+              </button>
+            )}
+          </div>
+        )}
 
         <div className="mt-6 flex flex-col gap-5">
           {!returnToSwap && (
@@ -273,8 +295,11 @@ export function UploadScreen({ returnToSwap = null, listing: startListing = 'swa
         garment={garmentType}
         onClose={() => setCameraOpen(false)}
         onComplete={(dataUrl, template) => {
-          setPhoto(dataUrl);
-          if (form.itemType === 'single') setForm((f) => ({ ...f, garment: template }));
+          if (cameraFor === 'back') setPhotoBack(dataUrl);
+          else {
+            setPhoto(dataUrl);
+            if (form.itemType === 'single') setForm((f) => ({ ...f, garment: template }));
+          }
           setCameraOpen(false);
         }}
       />
