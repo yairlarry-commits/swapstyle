@@ -83,8 +83,8 @@ export async function removeBackground(src, tolerance = 24, keepPath = null) {
 
 // The garment alone (transparent around it), still in the photo frame's coordinates.
 // Used both for the clean studio card and for dressing the mannequin.
-// The outline is only a guide: keep a generous band around it so sleeves and hems that don't match it exactly aren't cut.
-export const OUTLINE_SLACK = 0.06;
+// Breathing room kept around the outline when trimming
+export const OUTLINE_SLACK = 0.006;
 export async function cutoutGarment(src, tolerance = 24, keepPath = null, margin = OUTLINE_SLACK) {
   const img = await loadImage(src);
   const MAX = 900;

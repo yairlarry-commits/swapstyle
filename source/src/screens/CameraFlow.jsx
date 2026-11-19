@@ -297,12 +297,12 @@ export function CameraFlow({ open, garment, onClose, onComplete }) {
               <Button variant="glass" className="flex-1 px-3" onClick={() => setStep('crop')}>
                 <Crop size={16} /> Crop
               </Button>
-              <Button variant="light" className="flex-[1.4] px-3" loading={working} onClick={() => finish(true)}>
+              <Button variant="light" className="flex-[1.4] px-3" loading={working} onClick={() => finish(false)}>
                 <Check size={18} /> Done
               </Button>
             </div>
-            <button onClick={() => finish(false)} disabled={working} className="inline-flex items-center justify-center gap-1.5 text-center text-xs font-medium text-white/70 underline-offset-2 hover:underline">
-              <ImageIcon size={13} /> Keep the photo's own background
+            <button onClick={() => finish(true)} disabled={working} className="inline-flex items-center justify-center gap-1.5 text-center text-xs font-medium text-white/70 underline-offset-2 hover:underline">
+              <WandSparkles size={13} /> Also remove the background inside the outline
             </button>
           </div>
         )}
