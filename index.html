@@ -10,7 +10,26 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.js"></script>
-<script>if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));</script>
+<script>
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').then((r) => r.update()).catch(() => {}));
+// Auto-update: whenever the app comes back to the screen, check for a newer version and reload into it.
+(function () {
+  var BUILD = 'mwnix9l4';
+  var busy = false;
+  function check() {
+    if (busy || document.visibilityState !== 'visible') return;
+    busy = true;
+    fetch('version.txt?t=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.text() : BUILD; })
+      .then(function (v) { v = (v || '').trim(); if (v && v !== BUILD) location.reload(); })
+      .catch(function () {})
+      .then(function () { busy = false; });
+  }
+  document.addEventListener('visibilitychange', check);
+  window.addEventListener('focus', check);
+  setInterval(check, 5 * 60 * 1000);
+})();
+</script>
 <title>SwapStyle</title>
 <meta name="theme-color" content="#ffffff">
 <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPjxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiNDOUEyNEEiLz48c3RvcCBvZmZzZXQ9IjUwJSIgc3RvcC1jb2xvcj0iI0U0Qzg3OCIvPjxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iI0EyNzQyMCIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjQ4IiBmaWxsPSIjRkZGRkZGIi8+CiAgPGNpcmNsZSBjeD0iNTAiIGN5PSI1MCIgcj0iNDcuMjUiIGZpbGw9Im5vbmUiIHN0cm9rZT0idXJsKCNnKSIgc3Ryb2tlLXdpZHRoPSIxLjUiIG9wYWNpdHk9IjAuNTUiLz4KICA8cGF0aCBkPSJNIDQyLjc0LDIxLjkyIEEgMjksMjkgMCAxLDAgNjguNDUsMjcuNjIiIGZpbGw9Im5vbmUiIHN0cm9rZT0idXJsKCNnKSIgc3Ryb2tlLXdpZHRoPSI4LjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxwb2x5Z29uIHBvaW50cz0iNTcuODMsMjAuNDEgNzUuMDMsMTkuODAgNjMuOTksMzYuNDciIGZpbGw9InVybCgjZykiIHN0cm9rZT0idXJsKCNnKSIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KICA8cGF0aCBkPSJNIDU0LjA3LDM0LjI4IEEgMTYuMjQsMTYuMjQgMCAxLDEgMzguODIsMzguMjIiIGZpbGw9Im5vbmUiIHN0cm9rZT0idXJsKCNnKSIgc3Ryb2tlLXdpZHRoPSIyLjIiIHN0cm9rZS1kYXNoYXJyYXk9IjMuMiAyLjgiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxwb2x5Z29uIHBvaW50cz0iNDYuMjksMzIuOTggMzUuNzEsMzMuMjkgNDEuODYsNDIuNjAiIGZpbGw9InVybCgjZykiIHN0cm9rZT0idXJsKCNnKSIgc3Ryb2tlLXdpZHRoPSIxIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPgo=">

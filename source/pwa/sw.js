@@ -1,11 +1,11 @@
 // SwapStyle service worker: makes the app installable and opens instantly, even offline.
 // Paths are relative to where the app lives (works at a domain root or in a sub-folder like /swapstyle/).
-const CACHE = 'swapstyle-v22';
+const CACHE = 'swapstyle-v23';
 const BASE = self.registration.scope;
 const SHELL = ['', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'].map((p) => new URL(p, BASE).href);
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL.map((u) => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (e) => {

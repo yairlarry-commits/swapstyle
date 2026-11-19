@@ -14,6 +14,7 @@ const tw = require(path.join(TOOLS, 'tailwindcss/dist/lib.js'));
 const out = process.argv[2] || path.join(root, 'standalone.html');
 // --site: a full web page for your own hosting, connected to Supabase (loaded from a CDN at run time)
 const SITE = process.argv.includes('--site');
+const BUILD_ID = Date.now().toString(36);
 const env = Object.fromEntries(
   fs.readFileSync(path.join(root, '.env'), 'utf8').split('\n').filter((l) => /^VITE_/.test(l)).map((l) => l.split('=').map((x) => x.trim()))
 );
@@ -96,7 +97,26 @@ const head = SITE
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.js"></script>
-<script>if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));</script>
+<script>
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').then((r) => r.update()).catch(() => {}));
+// Auto-update: whenever the app comes back to the screen, check for a newer version and reload into it.
+(function () {
+  var BUILD = '${BUILD_ID}';
+  var busy = false;
+  function check() {
+    if (busy || document.visibilityState !== 'visible') return;
+    busy = true;
+    fetch('version.txt?t=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.text() : BUILD; })
+      .then(function (v) { v = (v || '').trim(); if (v && v !== BUILD) location.reload(); })
+      .catch(function () {})
+      .then(function () { busy = false; });
+  }
+  document.addEventListener('visibilitychange', check);
+  window.addEventListener('focus', check);
+  setInterval(check, 5 * 60 * 1000);
+})();
+</script>
 `
   : '';
 const html = head + `<title>SwapStyle</title>
@@ -114,6 +134,7 @@ ${jsCode.replace(/<\/script/gi, '<\\/script')}
 </script>
 ` + (SITE ? '</head>\n</html>\n' : '');
 fs.writeFileSync(out, html);
+if (SITE) fs.writeFileSync(path.join(path.dirname(out), 'version.txt'), BUILD_ID + '\n');
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log('wrote', out, (html.length / 1024).toFixed(0) + 'KB', 'icons:', names.size);
 
