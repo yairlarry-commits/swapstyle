@@ -274,6 +274,7 @@ const HE = {
   'No offers yet': 'אין עדיין הצעות',
   "When someone requests one of your items, or you request theirs, it'll show up here.": 'כשמישהו יבקש פריט שלכם, או אתם פריט של מישהו, זה יופיע כאן.',
   'Browse the feed': 'לגלישה בפיד',
+  "Keep the photo's own background": 'להשאיר את הרקע המקורי',
   'Worn photo added': 'נוספה תמונה על הגוף',
   'Add a photo of it being worn': 'הוספת תמונה על הגוף',
   'Tap it to choose another.': 'לחצו כדי לבחור אחרת.',

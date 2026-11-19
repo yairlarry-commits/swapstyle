@@ -83,7 +83,9 @@ export async function removeBackground(src, tolerance = 24, keepPath = null) {
 
 // The garment alone (transparent around it), still in the photo frame's coordinates.
 // Used both for the clean studio card and for dressing the mannequin.
-export async function cutoutGarment(src, tolerance = 24, keepPath = null, margin = 0.006) {
+// The outline is only a guide: keep a generous band around it so sleeves and hems that don't match it exactly aren't cut.
+export const OUTLINE_SLACK = 0.06;
+export async function cutoutGarment(src, tolerance = 24, keepPath = null, margin = OUTLINE_SLACK) {
   const img = await loadImage(src);
   const MAX = 900;
   let w = img.naturalWidth || img.width;
@@ -258,7 +260,7 @@ function placeOnCard(src, sw, sh) {
 }
 
 // Makes every pixel outside the outline (80×100 box, inset 5%) transparent
-function clearOutsidePath(d, w, h, pathD, margin = 0.006) {
+function clearOutsidePath(d, w, h, pathD, margin = OUTLINE_SLACK) {
   const md = softShapeMask(w, h, pathD, margin).getContext('2d').getImageData(0, 0, w, h).data;
   for (let i = 0; i < w * h; i++) {
     const a = md[i * 4 + 3];
@@ -269,7 +271,7 @@ function clearOutsidePath(d, w, h, pathD, margin = 0.006) {
 // The garment shape as a soft-edged mask (opaque inside, fading out just past the outline).
 // The blur comes from halving the mask a few times and doubling it back up, which gives a
 // smooth fade on every browser (iPhone Safari has no canvas blur filter).
-function softShapeMask(w, h, pathD, margin = 0.006) {
+function softShapeMask(w, h, pathD, margin = OUTLINE_SLACK) {
   const full = document.createElement('canvas');
   full.width = w;
   full.height = h;

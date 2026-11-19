@@ -145,7 +145,7 @@ export function GarmentOutline({ garment, className = '', dim = 'rgba(15,15,18,0
         </linearGradient>
         {/* blurs the edge of the hole so the area outside fades in instead of a hard cut */}
         <filter id={softId} x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="0.9" />
+          <feGaussianBlur stdDeviation="2.2" />
         </filter>
       </defs>
       {dim && (
@@ -157,7 +157,7 @@ export function GarmentOutline({ garment, className = '', dim = 'rgba(15,15,18,0
       )}
       <mask id={holeId}>
         <rect width={SHAPE_W} height={SHAPE_H} fill="white" />
-        <path d={shape.d} transform={inset} fill="black" stroke="black" strokeWidth={1.2} strokeLinejoin="round" filter={`url(#${softId})`} />
+        <path d={shape.d} transform={inset} fill="black" stroke="black" strokeWidth={10} strokeLinejoin="round" filter={`url(#${softId})`} />
       </mask>
       <g transform={inset} fill="none" strokeLinecap="round" strokeLinejoin="round">
         {tone === 'gold' && <path d={shape.d} stroke="rgba(0,0,0,0.18)" strokeWidth={1.2} />}
